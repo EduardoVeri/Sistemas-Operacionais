@@ -22,13 +22,13 @@ typedef struct no {
 typedef NO* PONTEIRONO;
 
 PONTEIRONO listaCMD = NULL;
-int indice = -1;
+int tamanho = -1;
 
 PONTEIRONO criarNo(char **argv){
 	PONTEIRONO novoNo = (PONTEIRONO)malloc(sizeof(NO));
 	novoNo->ponteiroArgv = argv;
 	novoNo->proximo = NULL;
-	printf("No criado com sucesso!\n");
+	//printf("No criado com sucesso!\n");
 	return novoNo;
 }	
 
@@ -40,32 +40,32 @@ void adicionarCMDLista(char **argv){
 
 	if(listaCMD == NULL){
 		listaCMD = novoNo;
-		indice++;
-		printf("Lista vazia, primeiro no adicionado!\n");
+		tamanho++;
+		//printf("Lista vazia, primeiro no adicionado!\n");
 		return;
 	}
 
-	while(i < indice){
+	while(i < tamanho){
 		noAux = noAux->proximo;
 	}
 
 	noAux->proximo = novoNo;
-	indice++;
-	printf("No adicionado com sucesso!\n");
+	tamanho++;
+	//printf("No adicionado com sucesso!\n");
 }
 
 void formatarArgv(char **argv) {
 	//char **aux = argv;
 	int inicio = 1;
 	int i = 1;
-	printf("Formatando argv...\n");
+	//printf("Formatando argv...\n");
 	while(argv[i] != NULL) {
-		printf("argv[%d] = %s\n", i, argv[i]);
+		//printf("argv[%d] = %s\n", i, argv[i]);
 		if(strcmp(argv[i], "|") == 0){
 			argv[i] = NULL; 
 			adicionarCMDLista(&argv[inicio]);
 			inicio = i+1;
-			printf("Comando adicionado a lista!\n");
+			//printf("Comando adicionado a lista!\n");
 		}
 		i++;
 	}
@@ -76,7 +76,7 @@ void mostrarLista(){
 	PONTEIRONO noAux = listaCMD;
 	int i = 0;
 	printf("Mostrando lista...\n");
-	while(i <= indice){
+	while(i <= tamanho){
 		printf("No %d: ", i);
 		while(*noAux->ponteiroArgv != NULL){
 			printf("%s ", *noAux->ponteiroArgv);
@@ -96,6 +96,23 @@ void liberarLista(PONTEIRONO no){
 	free(no);
 }
 
+char** retirarNomeComando(int indice){
+	PONTEIRONO aux = listaCMD;
+	int i = 0;
+
+	if(indice > tamanho){
+		printf("Indice fora do intervalo!");
+		liberarLista(listaCMD);
+		exit(1);
+	}
+
+	while(i != indice){
+		aux = aux->proximo;
+		i++;
+	}
+
+	return aux->ponteiroArgv;
+}
 
 int main(int argc, char **argv) {
 	if (argc == 1) {
@@ -104,27 +121,44 @@ int main(int argc, char **argv) {
 	}
 
 	formatarArgv(argv);
-	printf("Indice: %d\n", indice);
-	mostrarLista();
-	liberarLista(listaCMD);
-	
-	/* 
+	//printf("Indice: %d\n", tamanho);
+	//mostrarLista();
+	//liberarLista(listaCMD);
+	//PONTEIRONO no = retirarNomeComando(0);
+	//printf("%s\n", *no->ponteiroArgv);
+	//printf("%s\n", *cmd);
+
+	int fd[2];
+	if (pipe(fd) == -1) {
+		perror("pipe()");
+		return -1;
+	}
+
 	pid_t p_id;
 	p_id = fork();
 
 	if (p_id == 0) {
 		// filho
-		char *cmd, **cmd_argv;
-		cmd = argv[1];
-		cmd_argv = argv+1;
-		execvp(cmd, cmd_argv);
+		char **cmd;
+		cmd = retirarNomeComando(0);
+		dup2(fd[1], STDOUT_FILENO);
+		execvp(cmd[0], cmd);
+	
 	} else {
 		// pai
-		printf("Pai (%d) esperando filho (%d) terminar.\n",
-			(int)getpid(), p_id);
+		close(fd[1]);
+		//printf("Pai (%d) esperando filho (%d) terminar.\n", (int)getpid(), p_id);
 		waitpid(-1, NULL, 0);
-		printf("Filho acabou.\n");
-	} */
+		//printf("Filho acabou.\n");
+
+		char **cmd;
+		cmd = retirarNomeComando(1);
+		dup2(fd[0], STDIN_FILENO);
+		execvp(cmd[0], cmd);
+	} 
+
+	close(fd[0]);
+	close(fd[1]);
 
 	return 0;
 }
