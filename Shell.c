@@ -114,37 +114,27 @@ char** retirarNomeComando(int indice){
 	return aux->ponteiroArgv;
 }
 
-int main(int argc, char **argv) {
-	if (argc == 1) {
-		printf("Uso: %s <cmd> <p1> ... <pn> \n", argv[0]);
-		return 0;
-	}
-
-	formatarArgv(argv);
-	//printf("Indice: %d\n", tamanho);
-	//mostrarLista();
-	//liberarLista(listaCMD);
-	//PONTEIRONO no = retirarNomeComando(0);
-	//printf("%s\n", *no->ponteiroArgv);
-	//printf("%s\n", *cmd);
-
+void realizaOperacaoPipe(int i){
 	int fd[2];
 	if (pipe(fd) == -1) {
 		perror("pipe()");
-		return -1;
+		liberarLista(listaCMD);
+		exit(1);
 	}
 
 	pid_t p_id;
 	p_id = fork();
-
+	
 	if (p_id == 0) {
 		// filho
+		close(fd[0]);
 		char **cmd;
-		cmd = retirarNomeComando(0);
+		cmd = retirarNomeComando(i);
 		dup2(fd[1], STDOUT_FILENO);
 		execvp(cmd[0], cmd);
-	
-	} else {
+		
+	} 
+	else {
 		// pai
 		close(fd[1]);
 		//printf("Pai (%d) esperando filho (%d) terminar.\n", (int)getpid(), p_id);
@@ -152,13 +142,40 @@ int main(int argc, char **argv) {
 		//printf("Filho acabou.\n");
 
 		char **cmd;
-		cmd = retirarNomeComando(1);
+		cmd = retirarNomeComando(i+1);
 		dup2(fd[0], STDIN_FILENO);
 		execvp(cmd[0], cmd);
 	} 
-
 	close(fd[0]);
 	close(fd[1]);
+}
+	
+int main(int argc, char **argv) {
+	if (argc == 1) {
+		printf("Uso: %s <cmd> <p1> ... <pn> \n", argv[0]);
+		return 0;
+	}
+	//printf("%d", tamanho);
+	formatarArgv(argv);
+	//printf("%d", tamanho);
+	//printf("Indice: %d\n", tamanho);
+	//mostrarLista();
+	//liberarLista(listaCMD);
+	//PONTEIRONO no = retirarNomeComando(0);
+	//printf("%s\n", *no->ponteiroArgv);
+	//printf("%s\n", *cmd);
+
+	if(tamanho == 0){
+		liberarLista(listaCMD);
+		return -1;
+	}
+
+	int i = 0;
+	while(i < tamanho){
+		printf("Entrou");
+		realizaOperacaoPipe(i);
+		i = i + 2;
+	}
 
 	return 0;
 }
