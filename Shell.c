@@ -4,7 +4,9 @@
  * 
  * Itengrantes do Grupo:
  * Eduardo Verissimo Faccio - 148859 
- * Raphael Damasceno 
+ * Raphael Damasceno Rocha de Moraes - 156380
+ * ---
+ * ---
 */
 
 #include <stdio.h>
@@ -60,16 +62,13 @@ int main(int argc, char **argv) {
 	/* Cria um processo identico ao pai */
 	p_id = fork();
 
-	
 	if (p_id == 0) {
 		// ** Processo Filho **
-
 		// Realiza a execucao dos comandos da lista obitida anteriormente
 		realizaOperacaoPipe(i);
 	} 
 	else {
 		// ** Processo Pai **
-
 		// Aguarda a finalizacao da execucao dos comandos para poder liberar a lista ao final da execucao
 		printf("Esperando os comandos serem executados!\n");
 		waitpid(-1, NULL, 0);
