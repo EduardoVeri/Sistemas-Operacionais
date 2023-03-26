@@ -28,12 +28,12 @@ PONTEIRONO criarNo(char **argv){
 	PONTEIRONO novoNo = (PONTEIRONO)malloc(sizeof(NO));
 	novoNo->ponteiroArgv = argv;
 	novoNo->proximo = NULL;
+	//printf("No criado com sucesso!\n");
 	return novoNo;
 }	
 
 void adicionarCMDLista(char **argv){
 	int i = 0;
-
 	PONTEIRONO novoNo, noAux;
 	novoNo = criarNo(argv);
 	noAux = listaCMD;
@@ -47,7 +47,6 @@ void adicionarCMDLista(char **argv){
 
 	while(i < tamanho){
 		noAux = noAux->proximo;
-		i++;
 	}
 
 	noAux->proximo = novoNo;
@@ -56,9 +55,10 @@ void adicionarCMDLista(char **argv){
 }
 
 void formatarArgv(char **argv) {
+	//char **aux = argv;
 	int inicio = 1;
 	int i = 1;
-
+	//printf("Formatando argv...\n");
 	while(argv[i] != NULL) {
 		//printf("argv[%d] = %s\n", i, argv[i]);
 		if(strcmp(argv[i], "|") == 0){
@@ -70,7 +70,6 @@ void formatarArgv(char **argv) {
 		i++;
 	}
 	adicionarCMDLista(&argv[inicio]);
-	//printf("Comando adicionado a lista!\n");
 }
 
 void mostrarLista(){
@@ -115,50 +114,97 @@ char** retirarNomeComando(int indice){
 	return aux->ponteiroArgv;
 }
 
-void realizaOperacaoPipe(int i){
-	// Caso base da recursao
-	if(i == -1)
-		return;
-	
-	// Cria o Pipe que sera utilizado para a comunicacao entre os processos pai e filho
-	int fd_proximo[2];
-	if (pipe(fd_proximo) == -1) {
-		perror("pipe()");
-		liberarLista(listaCMD);
-		exit(1);
-	}
+void realizaOperacaoPipeImpar(int i, int fd[2]);
+void realizaOperacaoPipePar(int i, int fd[2]);
 
-	/* Cria um processo identico ao pai, que sera utilizado para 
-	executar o comando anterior ao do que sera realizado pelo pai */
-	/* Exemplo: Em "ls -la | grep Shell" o "ls -la" sera executado pelo
-	filho, enquanto o pai aguarda para executar o "grep Shell" */
+void realizaOperacaoPipeImpar(int i, int fd[2]){
 	pid_t p_id;
 	p_id = fork();
 
 	if (p_id == 0 ) {
-		// Processo Filho
-		/* Realiza a conexao de escrita do pipe entre os processos antes 
-		de chamar a funcao novamente */
-		dup2(fd_proximo[1], STDOUT_FILENO);
-		realizaOperacaoPipe(i-1);
-	} 
-	else {
-		// Processo Pai
-		/* Espera o processo filho finalizar, trazendo o 
-		resultado de sua execucao */
-		waitpid(-1, NULL, 0);
-		close(fd_proximo[1]); // Fecha o lado de escrita do pipe, ja que nao sera mais utilizado
-		
-		// Retira o nome e os argumentos do proximo comando da lista
+		// filho
+		close(fd[0]);
 		char **cmd;
 		cmd = retirarNomeComando(i);
-
-		/* Realiza a conexao de leitura do pipe antes de realizar a execucao do comando */
-		dup2(fd_proximo[0], STDIN_FILENO);
+		dup2(fd[0], STDIN_FILENO);
 		execvp(cmd[0], cmd);
 	} 
+	else {
+		printf("Espera o filho\n");
+		waitpid(-1, NULL, 0);
+	} 
+	close(fd[0]);
+	close(fd[1]);
 
-	close(fd_proximo[0]);
+} 
+
+void realizaOperacaoPipePar(int i, int fd[2]){
+	
+/* 	if(tamanho == i){
+		close(fd[1]);
+		close(fd[0]);
+		return 0;
+	} */
+	
+	pid_t p_id;
+	p_id = fork();
+
+	if (p_id == 0 ) {
+		// filho
+		close(fd[0]);
+		char **cmd;
+		cmd = retirarNomeComando(i);
+		dup2(fd[1], STDOUT_FILENO);
+		execvp(cmd[0], cmd);
+	} 
+	else {
+		// pai
+		close(fd[1]);
+		waitpid(-1, NULL, 0);
+		pid_t p_id2;
+		p_id2 = fork();
+
+		if(p_id2 == 0){
+			if(i + 2 < tamanho){
+				waitpid(-1, NULL, 0);
+				//printf("Filho acabou.\n");
+				int fd2[2];
+				if((i+1+tamanho)%2 == 0){
+					if (pipe(fd2) == -1) {
+						perror("pipe()");
+						liberarLista(listaCMD);
+						exit(1);
+					}
+					dup2(fd2[1], STDOUT_FILENO);
+					dup2(fd[0], STDIN_FILENO);
+					char **cmd;
+					cmd = retirarNomeComando(i+1);
+					execvp(cmd[0], cmd);
+					realizaOperacaoPipePar(i+2, fd2);
+				}	
+				else{
+					dup2(fd[0], STDIN_FILENO);
+					char **cmd;
+					cmd = retirarNomeComando(i+1);
+					execvp(cmd[0], cmd);
+					realizaOperacaoPipeImpar(i+2, fd2);
+				}
+			}
+			else{
+				printf("Esperando filho acabar.\n");
+				waitpid(-1, NULL, 0);
+			}
+		}
+		else{
+			
+			printf("Pai (%d) esperando filho (%d) terminar.\n", (int)getpid(), p_id);
+			sleep(1);
+			waitpid(-1, NULL, 0);
+		}
+		
+	} 
+	close(fd[0]);
+	close(fd[1]);
 }
 	
 int main(int argc, char **argv) {
@@ -166,27 +212,31 @@ int main(int argc, char **argv) {
 		printf("Uso: %s <cmd> <p1> ... <pn> \n", argv[0]);
 		return 0;
 	}
-
+	//printf("%d", tamanho);
 	formatarArgv(argv);
-
+	//printf("%d", tamanho);
+	//printf("Indice: %d\n", tamanho);
 	//mostrarLista();
+	//liberarLista(listaCMD);
+	//PONTEIRONO no = retirarNomeComando(0);
+	//printf("%s\n", *no->ponteiroArgv);
+	//printf("%s\n", *cmd);
 
-	pid_t p_id;
-	int i = tamanho;
-	
-	/* Cria um processo identico ao pai */
-	p_id = fork();
+	if(tamanho == 0){
+		liberarLista(listaCMD);
+		return -1;
+	}
 
-	if (p_id == 0 ) {
-		realizaOperacaoPipe(i);
-	} 
-	else {
-		printf("Esperando os comandos serem executados!\n");
-		waitpid(-1, NULL, 0);
-		printf("Comandos finalizados!\n");
-	} 	
 
-	liberarLista(listaCMD);
+	int fd[2];
+	if (pipe(fd) == -1) {
+		perror("pipe()");
+		liberarLista(listaCMD);
+		exit(1);
+	}
+	int i = 0;
+
+	realizaOperacaoPipePar(i, fd);
 
 	return 0;
 }
