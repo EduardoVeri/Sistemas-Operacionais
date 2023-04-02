@@ -2,11 +2,13 @@
  * Interpretador SHELL
  * Docente: Bruno Kimura
  * 
- * Itengrantes do Grupo:
+ * Itegrantes do Grupo:
+ * Caio Bonani Carvalho - 156313
  * Eduardo Verissimo Faccio - 148859 
+ * Marco Antonio Coral dos Santos - 156314
  * Raphael Damasceno Rocha de Moraes - 156380
- * ---
- * ---
+ *
+ *
 */
 
 #include <stdio.h>
