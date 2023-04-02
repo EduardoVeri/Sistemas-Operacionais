@@ -124,8 +124,6 @@ void realizaOperacaoPipe(int i){
 		/* Realiza a conexao de leitura do pipe antes de realizar a execucao do comando */
 		dup2(fd_proximo[0], STDIN_FILENO);
 		execvp(cmd[0], cmd); // Executa o comando desejado
-
-
 		
 	} 
 }
