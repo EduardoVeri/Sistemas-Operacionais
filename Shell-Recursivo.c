@@ -26,6 +26,7 @@ typedef struct comando{
 	int background; // Deve ser rodado em background
 	int pipe; // Possui um encadeamento de pipe
 	int indice; // Marca quantos argumentos tem o comando
+	int opLogico; // -1 = N/d, 0 = &&, 1 = ||
 	int modoAbertura; // 0 = Sobrescrever, 1 = Adicionar
 	char* entrada; // Arquivo de entrada
 	char* saida; // Arquivo de saida
@@ -45,7 +46,7 @@ void mostrarCMD(); // Mostra os comandos pegos na tela
 
 // Instrucoes para executar os comandos
 void realizaOperacaoPipe(int i); // Realiza comandos encadeados por pipe
-void realizaComando(int i); // Realiza um comando unitario
+int realizaComando(int i); // Realiza um comando unitario
 int verificaPipe(int i); // Realiza uma verificaçao para saber se o comando possui pipe
 void realizaComandoLogico(int i); // Realiza um comando com operador logico && ou ||
 
@@ -177,9 +178,11 @@ void realizaOperacaoPipe(int i){
 	} 
 }
 
-void realizaComando(int i){
+int realizaComando(int i){
 	int fileDescriptor;
-	
+	int status;
+	int returnStatus;
+
 	char **cmd;
 	cmd = vetorCMD[i]->cmd;
 
@@ -214,18 +217,25 @@ void realizaComando(int i){
 	
 	}
 	else{
-		if(vetorCMD[i]->background == 0)
-			waitpid(-1, NULL, 0);
+		if(vetorCMD[i]->background == 0){
+			waitpid(-1, &status, 0);
+			if (WIFEXITED(status)) {
+				returnStatus = WEXITSTATUS(status);
+				printf("Processo %d finalizado com status %d\n", p_id, returnStatus);
+				return returnStatus;
+			}
+		}
 		else
 			printf("Processo %d esta executando em background\n", p_id);
 	}
+	return 0;
 }
 
-/* 
-void realizaComandoLogico(i){
+
+void realizaComandoLogico(int i){
 	char **cmd;
 	cmd = vetorCMD[i]->cmd;
-
+	int status;
 	int fd[2];
 	if (pipe(fd) == -1) {
 		perror("pipe()");
@@ -237,9 +247,23 @@ void realizaComandoLogico(i){
 	p_id = fork();
 
 	if (p_id == 0){
-		realizaComando()
+		status = realizaComando(i);
+		
+		if(vetorCMD[i]->opLogico == 0){
+			if(status == 0){
+				realizaComando(i+1);
+			}
+		}
+		else if(vetorCMD[i]->opLogico == 1){
+			if(status != 0){
+				realizaComando(i+1);
+			}
+		}
 	}
-} */
+	else{
+		waitpid(-1, NULL, 0);
+	}
+} 
 
 
 
@@ -277,6 +301,7 @@ COMANDO* criaNo(){
 	novoNo->modoAbertura = -1;
 	novoNo->entrada = NULL;
 	novoNo->saida = NULL;
+	novoNo->opLogico = -1;
 	novoNo->cmd = (char**)malloc(sizeof(char*)*10);
 
 	for(int i = 0; i < 10; i++){
@@ -315,9 +340,11 @@ void pegarCMD(){
 		}
 		else if(strcmp(token, "&&") == 0){
 			flag = 0;
+			noCMD->opLogico = 0;
 		}
 		else if(strcmp(token, "||") == 0){
 			flag = 0;
+			noCMD->opLogico = 1;
 		}
 		else if(strcmp(token, "\"|\"") == 0){
 			noCMD->pipe = 1;
