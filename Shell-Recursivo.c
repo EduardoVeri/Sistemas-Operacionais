@@ -17,8 +17,6 @@
 #include <string.h>
 #include <fcntl.h>
 
-// Ativa os prints das funcoes da lista e impede a realizacao dos comandos
-#define DEBUGER 0 // 0 = Sem Debug, 1 = Com Debug
 #define MAX_BUFFER 1024
 #define MAX_CMD 200
 #define MSGSIZE 4096
@@ -34,132 +32,22 @@ typedef struct comando{
 	char** cmd; // Comando cmd com os seus argumentos
 } COMANDO;
 
-COMANDO ** vetorCMD = NULL;
-int indiceVetor = 0;
-int maxTam = 0;
+COMANDO ** vetorCMD = NULL; // Vetor de comandos
+int indiceVetor = 0; // Indice atual do vetor de comandos
+int maxTam = 0; // Tamanho maximo do vetor de comandos
 
-void inicializaVetor(){
-	vetorCMD = (COMANDO**)malloc(sizeof(COMANDO*)*MAX_CMD);
-	
-	for(int i = 0; i < MAX_CMD; i++){
-		vetorCMD[i] = NULL;
-	}
-}
+// Instrucoes para criar, pegar e organizar os comandos
+void inicializaVetor(); // Inicializa o vetor de comandos
+COMANDO* criaNo(); // Cria um novo no para o vetor de comandos
+void retirarQuebra(char* str); // Retira uma quebra de linha caso ela tenha sido pega pelo fgets
+void pegarCMD(); // Pega os comandos fornecidos pelo usuario
+void mostrarCMD(); // Mostra os comandos pegos na tela
 
-COMANDO* criaNo(){
-	COMANDO* novoNo = (COMANDO*)malloc(sizeof(COMANDO));
-	novoNo->background = 0;
-	novoNo->pipe = -1;
-	novoNo->indice = 0;
-	novoNo->modoAbertura = -1;
-	novoNo->entrada = NULL;
-	novoNo->saida = NULL;
-	novoNo->cmd = (char**)malloc(sizeof(char*)*10);
-
-	for(int i = 0; i < 10; i++){
-		novoNo->cmd[i] = NULL;
-	}
-
-	return novoNo;
-}
-
-void retirarQuebra(char* str){
-	int tam = strlen(str);
-	for(int i = 0; i < tam; i++){
-		if(str[i] == '\n'){
-			str[i] = '\0';
-			return;
-		}
-	}
-}
-
-void pegarCMD(){
-	COMANDO* noCMD = NULL;
-	int flag = 0;
-	char cmd[MAX_BUFFER];
-    fgets(cmd, MAX_BUFFER, stdin);
-    inicializaVetor();
-
-
-	// Busca os valores dos tokens, que serao os comandos CMD
-    char *token = strtok(cmd, " ");
-	while(token != NULL){
-		retirarQuebra(token); // Retira a ultima quebra de linha
-
-
-		if(strcmp(token, "&") == 0){
-			noCMD->background = 1;
-			flag = 0;
-		}
-		else if(strcmp(token, "&&") == 0){
-			flag = 0;
-		}
-		else if(strcmp(token, "||") == 0){
-			flag = 0;
-		}
-		else if(strcmp(token, "\"|\"") == 0){
-			noCMD->pipe = 1;
-			flag = 0;
-		}
-		else if(strcmp(token, "<") == 0){
-			token = strtok(NULL, " ");
-			retirarQuebra(token);
-			noCMD->entrada = token;
-		}
-		else if(strcmp(token, ">") == 0){
-			token = strtok(NULL, " ");
-			retirarQuebra(token);
-			noCMD->saida = token;
-			noCMD->modoAbertura = 0;
-		}
-		else if(strcmp(token, ">>") == 0){
-			token = strtok(NULL, " ");
-			retirarQuebra(token);
-			noCMD->saida = token;
-			noCMD->modoAbertura = 1;
-		}
-		else if(token[0] == '-' || flag == 1){
-            noCMD->cmd[noCMD->indice++] = token;
-		}
-		else if(strlen(token) > 0){ // Evita adicionar uma instrucao so com o \n
-			noCMD = criaNo();
-			noCMD->cmd[0] = token;
-			noCMD->indice = 1;
-			vetorCMD[indiceVetor++] = noCMD;
-			maxTam++;
-			flag = 1;
-		}
-		token = strtok(NULL, " ");
-	}
-}
-
-void mostrarCMD(){
-	for(int i = 0; i < maxTam; i++){
-		printf("Comando: %s ", vetorCMD[i]->cmd[0]);
-		for(int j = 1; j < vetorCMD[i]->indice; j++){
-			printf("%s ", vetorCMD[i]->cmd[j]);
-		}
-		printf("Saida: %s ", vetorCMD[i]->saida);
-	}
-	printf("\n");
-}
-
-/* Essa instrucao verifica */
-int verificaPipe(int i){
-	int contador = 0;
-
-	while(vetorCMD[i]->pipe == 1 && i < maxTam){
-		i++;
-		contador++;
-	}
-
-	return contador;
-}
-
-
-void realizaOperacaoPipe(int i);
-void realizaComando(int i);
-
+// Instrucoes para executar os comandos
+void realizaOperacaoPipe(int i); // Realiza comandos encadeados por pipe
+void realizaComando(int i); // Realiza um comando unitario
+int verificaPipe(int i); // Realiza uma verificaçao para saber se o comando possui pipe
+void realizaComandoLogico(int i); // Realiza um comando com operador logico && ou ||
 
 int main(int argc, char **argv) {
 	pegarCMD();
@@ -168,14 +56,7 @@ int main(int argc, char **argv) {
 	int i = 0;
 	pid_t p_id;
 	int fileDescriptor, flag = 0;
-
-	/* int leitura = open("teste.txt", "r");
-
-	printf("%d\n", (leitura)); */
-
-	/* Cria um processo identico ao pai */
 	
-
 	if(verificaPipe(i) > 0){
 		flag = 1;
 	}
@@ -293,7 +174,6 @@ void realizaOperacaoPipe(int i){
 			dup2(fd_proximo[0], STDIN_FILENO);
 		}
 		execvp(cmd[0], cmd); // Executa o comando desejado
-		
 	} 
 }
 
@@ -360,3 +240,128 @@ void realizaComandoLogico(i){
 		realizaComando()
 	}
 } */
+
+
+
+/* Essa instrucao verifica caso exista um encadeamento de pipes,
+retornando a quantidade de comandos que devem ser executados em sequencia */
+int verificaPipe(int i){
+	int contador = 0;
+
+	while(vetorCMD[i]->pipe == 1 && i < maxTam){
+		i++;
+		contador++;
+	}
+
+	return contador;
+}
+
+
+// =============================================================================
+// =============== Instrucoes para pegar e organizar os comandos ===============
+// =============================================================================
+
+void inicializaVetor(){
+	vetorCMD = (COMANDO**)malloc(sizeof(COMANDO*)*MAX_CMD);
+	
+	for(int i = 0; i < MAX_CMD; i++){
+		vetorCMD[i] = NULL;
+	}
+}
+
+COMANDO* criaNo(){
+	COMANDO* novoNo = (COMANDO*)malloc(sizeof(COMANDO));
+	novoNo->background = 0;
+	novoNo->pipe = -1;
+	novoNo->indice = 0;
+	novoNo->modoAbertura = -1;
+	novoNo->entrada = NULL;
+	novoNo->saida = NULL;
+	novoNo->cmd = (char**)malloc(sizeof(char*)*10);
+
+	for(int i = 0; i < 10; i++){
+		novoNo->cmd[i] = NULL;
+	}
+
+	return novoNo;
+}
+
+void retirarQuebra(char* str){
+	int tam = strlen(str);
+	for(int i = 0; i < tam; i++){
+		if(str[i] == '\n'){
+			str[i] = '\0';
+			return;
+		}
+	}
+}
+
+void pegarCMD(){
+	COMANDO* noCMD = NULL;
+	int flag = 0;
+	char cmd[MAX_BUFFER];
+    fgets(cmd, MAX_BUFFER, stdin);
+    inicializaVetor();
+
+	// Busca os valores dos tokens, que serao os comandos CMD
+    char *token = strtok(cmd, " ");
+	while(token != NULL){
+		retirarQuebra(token); // Retira a ultima quebra de linha
+
+
+		if(strcmp(token, "&") == 0){
+			noCMD->background = 1;
+			flag = 0;
+		}
+		else if(strcmp(token, "&&") == 0){
+			flag = 0;
+		}
+		else if(strcmp(token, "||") == 0){
+			flag = 0;
+		}
+		else if(strcmp(token, "\"|\"") == 0){
+			noCMD->pipe = 1;
+			flag = 0;
+		}
+		else if(strcmp(token, "<") == 0){
+			token = strtok(NULL, " ");
+			retirarQuebra(token);
+			noCMD->entrada = token;
+		}
+		else if(strcmp(token, ">") == 0){
+			token = strtok(NULL, " ");
+			retirarQuebra(token);
+			noCMD->saida = token;
+			noCMD->modoAbertura = 0;
+		}
+		else if(strcmp(token, ">>") == 0){
+			token = strtok(NULL, " ");
+			retirarQuebra(token);
+			noCMD->saida = token;
+			noCMD->modoAbertura = 1;
+		}
+		else if(token[0] == '-' || flag == 1){
+            noCMD->cmd[noCMD->indice++] = token;
+		}
+		else if(strlen(token) > 0){ // Evita adicionar uma instrucao so com o \n
+			noCMD = criaNo();
+			noCMD->cmd[0] = token;
+			noCMD->indice = 1;
+			vetorCMD[indiceVetor++] = noCMD;
+			maxTam++;
+			flag = 1;
+		}
+		token = strtok(NULL, " ");
+	}
+}
+
+void mostrarCMD(){
+	for(int i = 0; i < maxTam; i++){
+		printf("Comando: %s ", vetorCMD[i]->cmd[0]);
+		for(int j = 1; j < vetorCMD[i]->indice; j++){
+			printf("%s ", vetorCMD[i]->cmd[j]);
+		}
+		printf("Saida: %s ", vetorCMD[i]->saida);
+	}
+	printf("\n");
+}
