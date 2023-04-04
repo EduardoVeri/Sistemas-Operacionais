@@ -5,7 +5,7 @@
  * Itegrantes do Grupo:
  * Caio Bonani Carvalho - 156313
  * Eduardo Verissimo Faccio - 148859 
- * Marco Antonio Coral dos Santos - 156314
+ * Marco Antonio Coral dos Santos - 158467
  * Raphael Damasceno Rocha de Moraes - 156380
  *
 */
@@ -119,9 +119,7 @@ void pegarCMD(){
 			noCMD->modoAbertura = 1;
 		}
 		else if(token[0] == '-' || flag == 1){
-			// A string pega eh parametro
             noCMD->cmd[noCMD->indice++] = token;
-			//printf("Parametro: %s\n", token);
 		}
 		else if(strlen(token) > 0){ // Evita adicionar uma instrucao so com o \n
 			noCMD = criaNo();
@@ -146,14 +144,30 @@ void mostrarCMD(){
 	printf("\n");
 }
 
+/* Essa instrucao verifica */
+int verificaPipe(int i){
+	int contador = 0;
+
+	while(vetorCMD[i]->pipe == 1 && i < maxTam){
+		i++;
+		contador++;
+	}
+
+	return contador;
+}
+
+
 void realizaOperacaoPipe(int i);
-	
+void realizaComando(int i);
+
+
 int main(int argc, char **argv) {
 	pegarCMD();
 	mostrarCMD();
+	
+	int i = 0;
 	pid_t p_id;
-	int fd;
-	int fileDescriptor;
+	int fileDescriptor, flag = 0;
 
 	/* int leitura = open("teste.txt", "r");
 
@@ -161,6 +175,11 @@ int main(int argc, char **argv) {
 
 	/* Cria um processo identico ao pai */
 	
+
+	if(verificaPipe(i) > 0){
+		flag = 1;
+	}
+
 	p_id = fork();
 
 	int fd_proximo[2];
@@ -171,15 +190,29 @@ int main(int argc, char **argv) {
 
 	if (p_id == 0) {
 		// ** Processo Filho **
-		// Realiza a execucao dos comandos da lista obitida anteriormente
-		if(vetorCMD[indiceVetor-1]->saida != NULL){
-			fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
-			dup2(fileDescriptor, STDOUT_FILENO); 
-			close(fileDescriptor);
-		}
+		if(flag == 1){		
+			// Realiza a execucao dos comandos da lista obitida anteriormente
+			if(vetorCMD[indiceVetor-1]->modoAbertura == 0){
+				fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+				dup2(fileDescriptor, STDOUT_FILENO); 
+				close(fileDescriptor);
+			}
+			else if (vetorCMD[indiceVetor-1]->modoAbertura == 1){
+				fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+				dup2(fileDescriptor, STDOUT_FILENO); 
+				close(fileDescriptor);
+			}
 
-		close(fd_proximo[0]);
-		realizaOperacaoPipe(indiceVetor-1);
+			close(fd_proximo[0]);
+			realizaOperacaoPipe(indiceVetor-1);
+		}
+		else{
+			realizaComando(i);
+		}
+		// Verificar caso tenha && ou ||
+
+		// Caso nao tenha, executa o comando normalmente
+
 		return 0;
 	} 
 	else {
@@ -187,20 +220,9 @@ int main(int argc, char **argv) {
 		// Aguarda a finalizacao da execucao dos comandos para poder liberar a lista ao final da execucao
 		printf("Esperando os comandos serem executados!\n");
 		waitpid(-1, NULL, 0);
-		/*if(vetorCMD[indiceVetor-1]->saida != NULL){
-			fd = open("teste.txt", O_APPEND);
-			char inbuf[MSGSIZE];
-			int n;
-			
-			close(fd_proximo[1]);
-			while ((n = read(fd_proximo[0],inbuf,MSGSIZE))>0)
-				write(1,inbuf,n);
-			printf("%d\n", n);
-		}*/
 		printf("Comandos finalizados!\n");
 	} 	
 
-	close(fd);
 	return 0;
 }
 
@@ -232,8 +254,13 @@ void realizaOperacaoPipe(int i){
 		/* Realiza a conexao de escrita do pipe entre os processos antes 
 		de chamar a funcao novamente */
 
-		if(vetorCMD[i-1]->saida != NULL){
-			fileDescriptor = open(vetorCMD[i]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+		if(vetorCMD[i-1]->modoAbertura == 0){
+			fileDescriptor = open(vetorCMD[i-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+			dup2(fileDescriptor, STDOUT_FILENO); 
+			close(fileDescriptor);
+		}
+		else if (vetorCMD[i-1]->modoAbertura == 1){
+			fileDescriptor = open(vetorCMD[i-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
 			dup2(fileDescriptor, STDOUT_FILENO); 
 			close(fileDescriptor);
 		}
@@ -257,9 +284,7 @@ void realizaOperacaoPipe(int i){
 
 		/* Realiza a conexao de leitura do pipe antes de realizar a execucao do comando */
 		
-		if(vetorCMD[i]->entrada != NULL){
-			printf("entrou!!\n");
-			
+		if(vetorCMD[i]->entrada != NULL){			
 			fileDescriptor = open(vetorCMD[i]->entrada, O_RDONLY, 0600);  
 			dup2(fileDescriptor, STDIN_FILENO);
 			close(fileDescriptor);
@@ -271,3 +296,67 @@ void realizaOperacaoPipe(int i){
 		
 	} 
 }
+
+void realizaComando(int i){
+	int fileDescriptor;
+	
+	char **cmd;
+	cmd = vetorCMD[i]->cmd;
+
+	int fd[2];
+	if (pipe(fd) == -1) {
+		perror("pipe()");
+		exit(1);
+	}
+
+	pid_t p_id;
+
+	p_id = fork();
+
+	if (p_id == 0){
+		if(vetorCMD[i]->entrada != NULL){
+			int fileDescriptor = open(vetorCMD[i]->entrada, O_RDONLY, 0600);  
+			dup2(fileDescriptor, STDIN_FILENO);
+			close(fileDescriptor);
+		}
+		if(vetorCMD[i]->modoAbertura == 0){
+			fileDescriptor = open(vetorCMD[i]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+			dup2(fileDescriptor, STDOUT_FILENO); 
+			close(fileDescriptor);
+		}
+		else if (vetorCMD[i]->modoAbertura == 1){
+			fileDescriptor = open(vetorCMD[i]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+			dup2(fileDescriptor, STDOUT_FILENO); 
+			close(fileDescriptor);
+		}
+
+		execvp(cmd[0], cmd);
+	
+	}
+	else{
+		if(vetorCMD[i]->background == 0)
+			waitpid(-1, NULL, 0);
+		else
+			printf("Processo %d esta executando em background\n", p_id);
+	}
+}
+
+/* 
+void realizaComandoLogico(i){
+	char **cmd;
+	cmd = vetorCMD[i]->cmd;
+
+	int fd[2];
+	if (pipe(fd) == -1) {
+		perror("pipe()");
+		exit(1);
+	}
+
+	pid_t p_id;
+
+	p_id = fork();
+
+	if (p_id == 0){
+		realizaComando()
+	}
+} */

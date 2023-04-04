@@ -1,13 +1,12 @@
-total 84
-drwxrwxr-x 5 eduardo eduardo  4096 abr  3 20:45 .
-drwxr-xr-x 9 eduardo eduardo  4096 abr  3 20:11 ..
-drwxrwxr-x 2 eduardo eduardo  4096 abr  2 21:14 Codigos_Extras
-drwxrwxr-x 8 eduardo eduardo  4096 abr  2 22:23 .git
--rw-rw-r-- 1 eduardo eduardo    66 mar 24 16:57 .gitattributes
--rw-rw-r-- 1 eduardo eduardo   430 mar 24 16:57 .gitignore
--rwxrwxr-x 1 eduardo eduardo 17648 mar 26 01:22 Shell
--rw-rw-r-- 1 eduardo eduardo  5034 abr  2 14:30 Shell.c
--rw-rw-r-- 1 eduardo eduardo  6259 abr  3 20:41 Shell-Recursivo.c
--rwxrwxr-x 1 eduardo eduardo 17816 abr  3 20:41 teste-Shell
--rw-rw-r-- 1 eduardo eduardo     0 abr  3 20:45 teste.txt
-drwxrwxr-x 2 eduardo eduardo  4096 abr  2 18:04 .vscode
+total 64
+drwxrwxr-x  6 eduardo eduardo  4096 abr  4 16:00 .
+drwxr-xr-x 10 eduardo eduardo  4096 abr  3 21:22 ..
+drwxrwxr-x  2 eduardo eduardo  4096 abr  2 21:14 Codigos_Extras
+drwxrwxr-x  2 eduardo eduardo  4096 abr  4 16:00 Funcionando
+drwxrwxr-x  8 eduardo eduardo  4096 abr  4 14:36 .git
+-rw-rw-r--  1 eduardo eduardo    66 mar 24 16:57 .gitattributes
+-rw-rw-r--  1 eduardo eduardo   430 mar 24 16:57 .gitignore
+-rw-rw-r--  1 eduardo eduardo  7901 abr  4 16:00 Shell-Recursivo.c
+-rwxrwxr-x  1 eduardo eduardo 21992 abr  4 16:00 teste-Shell
+-rw-------  1 eduardo eduardo     0 abr  4 16:02 teste.txt
+drwxrwxr-x  2 eduardo eduardo  4096 abr  2 18:04 .vscode
