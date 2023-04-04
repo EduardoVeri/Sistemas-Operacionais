@@ -88,6 +88,9 @@ int main(int argc, char **argv) {
 			close(fd_proximo[0]);
 			realizaOperacaoPipe(indiceVetor-1);
 		}
+		else if(1){
+			realizaComandoLogico(i);
+		}
 		else{
 			realizaComando(i);
 		}
@@ -221,7 +224,7 @@ int realizaComando(int i){
 			waitpid(-1, &status, 0);
 			if (WIFEXITED(status)) {
 				returnStatus = WEXITSTATUS(status);
-				printf("Processo %d finalizado com status %d\n", p_id, returnStatus);
+				//printf("Processo %d finalizado com status %d\n", p_id, returnStatus);
 				return returnStatus;
 			}
 		}
