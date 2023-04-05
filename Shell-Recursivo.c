@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 	mostrarCMD();
 	
 	int status = INITIAL_STATUS;
-	int i = 0;
+	int i = 0, incremento = 0;
 	pid_t p_id;
 	int fileDescriptor, flag = 0;
 	
@@ -70,55 +70,57 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	
+	for(; i < maxTam; i = i + 2){
+		p_id = fork();
 
-	p_id = fork();
+		if (p_id == 0) {
+			// ** Processo Filho **
+			if(flag == 1){		
+				// Realiza a execucao dos comandos da lista obitida anteriormente
+				if(vetorCMD[indiceVetor-1]->modoAbertura == 0){
+					fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+					dup2(fileDescriptor, STDOUT_FILENO); 
+					close(fileDescriptor);
+				}
+				else if (vetorCMD[indiceVetor-1]->modoAbertura == 1){
+					fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+					dup2(fileDescriptor, STDOUT_FILENO); 
+					close(fileDescriptor);
+				}
 
-	if (p_id == 0) {
-		// ** Processo Filho **
-		if(flag == 1){		
-			// Realiza a execucao dos comandos da lista obitida anteriormente
-			if(vetorCMD[indiceVetor-1]->modoAbertura == 0){
-				fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
-				dup2(fileDescriptor, STDOUT_FILENO); 
-				close(fileDescriptor);
+				realizaOperacaoPipe(indiceVetor-1);
 			}
-			else if (vetorCMD[indiceVetor-1]->modoAbertura == 1){
-				fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
-				dup2(fileDescriptor, STDOUT_FILENO); 
-				close(fileDescriptor);
+			else if(1){
+				printf("Entrou no if do status! %d\n", status);
+				printf("Executando comando logico! %s %s\n", vetorCMD[i]->cmd[0], vetorCMD[i]->cmd[1]);
+				realizaComandoLogico(i, &status);
+				
+				// Envia o status para o processo pai
+				close(fd_status[0]);
+				write(fd_status[1], &status, sizeof(status));
+				close(fd_status[1]);
 			}
+			else{
+				realizaComando(i);
+			}
+			// Verificar caso tenha && ou ||
 
-			realizaOperacaoPipe(indiceVetor-1);
-		}
-		else if(1){
-			realizaComandoLogico(i, &status);
+			// Caso nao tenha, executa o comando normalmente
+			return 0;
+		} 
+		else {
+			// ** Processo Pai **
+			// Aguarda a finalizacao da execucao dos comandos para poder liberar a lista ao final da execucao
+			printf("Esperando os comandos serem executados!\n");
+			waitpid(-1, NULL, 0);
+			printf("Comandos finalizados!\n");
 			
-			// Envia o status para o processo pai
-			close(fd_status[0]);
-			write(fd_status[1], &status, sizeof(status));
+			// Recebe o status do processo filho
 			close(fd_status[1]);
-		}
-		else{
-			realizaComando(i);
-		}
-		// Verificar caso tenha && ou ||
-
-		// Caso nao tenha, executa o comando normalmente
-		return 0;
-	} 
-	else {
-		// ** Processo Pai **
-		// Aguarda a finalizacao da execucao dos comandos para poder liberar a lista ao final da execucao
-		printf("Esperando os comandos serem executados!\n");
-		waitpid(-1, NULL, 0);
-		printf("Comandos finalizados!\n");
-		
-		// Recebe o status do processo filho
-		close(fd_status[1]);
-		read(fd_status[0], &status, sizeof(int));
-		close(fd_status[0]);
-	} 	
+			read(fd_status[0], &status, sizeof(int));
+			close(fd_status[0]);
+		} 	
+	}
 
 	return 0;
 }
@@ -250,24 +252,35 @@ int realizaComando(int i){
 
 
 void realizaComandoLogico(int i, int *status){
-	char **cmd;
-	cmd = vetorCMD[i]->cmd;
-
+	
 	// Caso seja o primeiro comando a ser executado
 	if(*status == INITIAL_STATUS){
 		*status = realizaComando(i);
-	}
-	
-	if(vetorCMD[i]->opLogico == 0){
-		if(*status == 0){
-			realizaComando(i+1);
+		
+		if(vetorCMD[i+1]->opLogico == 0){
+			if(*status == 0){
+				realizaComando(i+1);
+			}
+		}
+		else if(vetorCMD[i+1]->opLogico == 1){
+			if(*status != 0){
+				realizaComando(i+1);
+			}
 		}
 	}
-	else if(vetorCMD[i]->opLogico == 1){
-		if(*status != 0){
-			realizaComando(i+1);
+	else{
+		if(vetorCMD[i]->opLogico == 0){
+			if(*status == 0){
+				realizaComando(i);
+			}
+		}
+		else if(vetorCMD[i]->opLogico == 1){
+			if(*status != 0){
+				realizaComando(i);
+			}
 		}
 	}
+
 }
 
 
@@ -330,15 +343,16 @@ void retirarQuebra(char* str){
 void pegarCMD(){
 	COMANDO* noCMD = NULL;
 	int flag = 0;
+	int op = -1;
 	char cmd[MAX_BUFFER];
     fgets(cmd, MAX_BUFFER, stdin);
     inicializaVetor();
 
 	// Busca os valores dos tokens, que serao os comandos CMD
-    char *token = strtok(cmd, " ");
+    char *token = strtok(cmd, " \t");
 	while(token != NULL){
 		retirarQuebra(token); // Retira a ultima quebra de linha
-
+		
 
 		if(strcmp(token, "&") == 0){
 			noCMD->background = 1;
@@ -346,29 +360,29 @@ void pegarCMD(){
 		}
 		else if(strcmp(token, "&&") == 0){
 			flag = 0;
-			noCMD->opLogico = 0;
+			op = 0;
 		}
 		else if(strcmp(token, "||") == 0){
 			flag = 0;
-			noCMD->opLogico = 1;
+			op = 1;
 		}
 		else if(strcmp(token, "\"|\"") == 0){
 			noCMD->pipe = 1;
 			flag = 0;
 		}
 		else if(strcmp(token, "<") == 0){
-			token = strtok(NULL, " ");
+			token = strtok(NULL, " \t");
 			retirarQuebra(token);
 			noCMD->entrada = token;
 		}
 		else if(strcmp(token, ">") == 0){
-			token = strtok(NULL, " ");
+			token = strtok(NULL, " \t");
 			retirarQuebra(token);
 			noCMD->saida = token;
 			noCMD->modoAbertura = 0;
 		}
 		else if(strcmp(token, ">>") == 0){
-			token = strtok(NULL, " ");
+			token = strtok(NULL, " \t");
 			retirarQuebra(token);
 			noCMD->saida = token;
 			noCMD->modoAbertura = 1;
@@ -380,11 +394,13 @@ void pegarCMD(){
 			noCMD = criaNo();
 			noCMD->cmd[0] = token;
 			noCMD->indice = 1;
+			noCMD->opLogico = op;
 			vetorCMD[indiceVetor++] = noCMD;
 			maxTam++;
 			flag = 1;
+			op = -1;
 		}
-		token = strtok(NULL, " ");
+		token = strtok(NULL, " \t");
 	}
 }
 
@@ -394,7 +410,7 @@ void mostrarCMD(){
 		for(int j = 1; j < vetorCMD[i]->indice; j++){
 			printf("%s ", vetorCMD[i]->cmd[j]);
 		}
-		//printf("Saida: %s ", vetorCMD[i]->saida);
+		printf("Op: %d \n", vetorCMD[i]->opLogico);
 	}
 	printf("\n");
 }
