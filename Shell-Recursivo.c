@@ -20,6 +20,7 @@
 #define MAX_BUFFER 1024
 #define MAX_CMD 200
 #define MSGSIZE 4096
+#define INITIAL_STATUS -1000
 
 // Struct para rodar 
 typedef struct comando{
@@ -48,12 +49,13 @@ void mostrarCMD(); // Mostra os comandos pegos na tela
 void realizaOperacaoPipe(int i); // Realiza comandos encadeados por pipe
 int realizaComando(int i); // Realiza um comando unitario
 int verificaPipe(int i); // Realiza uma verificaçao para saber se o comando possui pipe
-void realizaComandoLogico(int i); // Realiza um comando com operador logico && ou ||
+void realizaComandoLogico(int i, int *status); // Realiza um comando com operador logico && ou ||
 
 int main(int argc, char **argv) {
 	pegarCMD();
 	mostrarCMD();
 	
+	int status = INITIAL_STATUS;
 	int i = 0;
 	pid_t p_id;
 	int fileDescriptor, flag = 0;
@@ -64,11 +66,13 @@ int main(int argc, char **argv) {
 
 	p_id = fork();
 
-	int fd_proximo[2];
-	if (pipe(fd_proximo) == -1) {
+
+	int fd_status[2];
+	if (pipe(fd_status) == -1) {
 		perror("pipe()");
 		exit(1);
 	}
+
 
 	if (p_id == 0) {
 		// ** Processo Filho **
@@ -85,11 +89,13 @@ int main(int argc, char **argv) {
 				close(fileDescriptor);
 			}
 
-			close(fd_proximo[0]);
 			realizaOperacaoPipe(indiceVetor-1);
 		}
 		else if(1){
-			realizaComandoLogico(i);
+			close(fd_status[0]);
+			realizaComandoLogico(i, &status);
+			write(fd_status[1], &status, sizeof(status));
+			printf("Passou write\n");
 		}
 		else{
 			realizaComando(i);
@@ -97,7 +103,7 @@ int main(int argc, char **argv) {
 		// Verificar caso tenha && ou ||
 
 		// Caso nao tenha, executa o comando normalmente
-
+		printf("Status1: %d\n", status);
 		return 0;
 	} 
 	else {
@@ -106,6 +112,9 @@ int main(int argc, char **argv) {
 		printf("Esperando os comandos serem executados!\n");
 		waitpid(-1, NULL, 0);
 		printf("Comandos finalizados!\n");
+		close(fd_status[1]);
+		read(fd_status[0], &status, sizeof(status));
+		printf("Status2: %d\n", status);
 	} 	
 
 	return 0;
@@ -114,7 +123,7 @@ int main(int argc, char **argv) {
 
 void realizaOperacaoPipe(int i){
 	int fileDescriptor;
-	
+
 	// Caso base da recursao
 	if(i == -1)
 		return;
@@ -215,8 +224,9 @@ int realizaComando(int i){
 			dup2(fileDescriptor, STDOUT_FILENO); 
 			close(fileDescriptor);
 		}
-
+		// TODO: Implementar a saida da execucao para um arquivo buffer para o caso de um pipe
 		execvp(cmd[0], cmd);
+		
 	
 	}
 	else{
@@ -231,14 +241,15 @@ int realizaComando(int i){
 		else
 			printf("Processo %d esta executando em background\n", p_id);
 	}
+	
 	return 0;
 }
 
 
-void realizaComandoLogico(int i){
+void realizaComandoLogico(int i, int *status){
 	char **cmd;
 	cmd = vetorCMD[i]->cmd;
-	int status;
+	
 	int fd[2];
 	if (pipe(fd) == -1) {
 		perror("pipe()");
@@ -250,15 +261,19 @@ void realizaComandoLogico(int i){
 	p_id = fork();
 
 	if (p_id == 0){
-		status = realizaComando(i);
+
+		// Caso seja o primeiro comando a ser executado
+		if(*status == INITIAL_STATUS){
+			*status = realizaComando(i);
+		}
 		
 		if(vetorCMD[i]->opLogico == 0){
-			if(status == 0){
+			if(*status == 0){
 				realizaComando(i+1);
 			}
 		}
 		else if(vetorCMD[i]->opLogico == 1){
-			if(status != 0){
+			if(*status != 0){
 				realizaComando(i+1);
 			}
 		}
@@ -391,7 +406,7 @@ void mostrarCMD(){
 		for(int j = 1; j < vetorCMD[i]->indice; j++){
 			printf("%s ", vetorCMD[i]->cmd[j]);
 		}
-		printf("Saida: %s ", vetorCMD[i]->saida);
+		//printf("Saida: %s ", vetorCMD[i]->saida);
 	}
 	printf("\n");
 }

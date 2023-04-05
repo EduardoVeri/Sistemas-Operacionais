@@ -33,9 +33,9 @@
     "**/.vscode",
     "**/.vscode/**"
   ],
-"C_Cpp_Runner.useAddressSanitizer": false,
-"files.associations": {
-	"shell-iterativo": "c",
-	"fcntl.h": "c"
-}
+  "C_Cpp_Runner.useAddressSanitizer": false,
+  "files.associations": {
+    "shell-iterativo": "c",
+    "fcntl.h": "c"
+  }
 }
