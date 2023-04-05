@@ -64,15 +64,15 @@ int main(int argc, char **argv) {
 		flag = 1;
 	}
 
-	p_id = fork();
-
-
 	int fd_status[2];
 	if (pipe(fd_status) == -1) {
 		perror("pipe()");
 		exit(1);
 	}
 
+	
+
+	p_id = fork();
 
 	if (p_id == 0) {
 		// ** Processo Filho **
@@ -92,10 +92,12 @@ int main(int argc, char **argv) {
 			realizaOperacaoPipe(indiceVetor-1);
 		}
 		else if(1){
-			close(fd_status[0]);
 			realizaComandoLogico(i, &status);
+			
+			// Envia o status para o processo pai
+			close(fd_status[0]);
 			write(fd_status[1], &status, sizeof(status));
-			printf("Passou write\n");
+			close(fd_status[1]);
 		}
 		else{
 			realizaComando(i);
@@ -103,7 +105,6 @@ int main(int argc, char **argv) {
 		// Verificar caso tenha && ou ||
 
 		// Caso nao tenha, executa o comando normalmente
-		printf("Status1: %d\n", status);
 		return 0;
 	} 
 	else {
@@ -112,9 +113,11 @@ int main(int argc, char **argv) {
 		printf("Esperando os comandos serem executados!\n");
 		waitpid(-1, NULL, 0);
 		printf("Comandos finalizados!\n");
+		
+		// Recebe o status do processo filho
 		close(fd_status[1]);
-		read(fd_status[0], &status, sizeof(status));
-		printf("Status2: %d\n", status);
+		read(fd_status[0], &status, sizeof(int));
+		close(fd_status[0]);
 	} 	
 
 	return 0;
@@ -249,39 +252,24 @@ int realizaComando(int i){
 void realizaComandoLogico(int i, int *status){
 	char **cmd;
 	cmd = vetorCMD[i]->cmd;
+
+	// Caso seja o primeiro comando a ser executado
+	if(*status == INITIAL_STATUS){
+		*status = realizaComando(i);
+	}
 	
-	int fd[2];
-	if (pipe(fd) == -1) {
-		perror("pipe()");
-		exit(1);
-	}
-
-	pid_t p_id;
-
-	p_id = fork();
-
-	if (p_id == 0){
-
-		// Caso seja o primeiro comando a ser executado
-		if(*status == INITIAL_STATUS){
-			*status = realizaComando(i);
-		}
-		
-		if(vetorCMD[i]->opLogico == 0){
-			if(*status == 0){
-				realizaComando(i+1);
-			}
-		}
-		else if(vetorCMD[i]->opLogico == 1){
-			if(*status != 0){
-				realizaComando(i+1);
-			}
+	if(vetorCMD[i]->opLogico == 0){
+		if(*status == 0){
+			realizaComando(i+1);
 		}
 	}
-	else{
-		waitpid(-1, NULL, 0);
+	else if(vetorCMD[i]->opLogico == 1){
+		if(*status != 0){
+			realizaComando(i+1);
+		}
 	}
-} 
+}
+
 
 
 
