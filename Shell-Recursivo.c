@@ -20,7 +20,6 @@
 #define MAX_BUFFER 1024
 #define MAX_CMD 200
 #define MSGSIZE 4096
-#define INITIAL_STATUS -1000
 
 // Struct para rodar 
 typedef struct comando{
@@ -46,74 +45,96 @@ void pegarCMD(); // Pega os comandos fornecidos pelo usuario
 void mostrarCMD(); // Mostra os comandos pegos na tela
 
 // Instrucoes para executar os comandos
-void realizaOperacaoPipe(int i); // Realiza comandos encadeados por pipe
+void realizaOperacaoPipe(int i, int min); // Realiza comandos encadeados por pipe
 int realizaComando(int i); // Realiza um comando unitario
 int verificaPipe(int i); // Realiza uma verificaçao para saber se o comando possui pipe
 void realizaComandoLogico(int i, int *status); // Realiza um comando com operador logico && ou ||
+int verificaOp(int i); // Verifica se o comando possui operador logico && ou ||
 
+/*  */
 int main(int argc, char **argv) {
 	pegarCMD();
 	mostrarCMD();
-	
-	int status = INITIAL_STATUS;
-	int i = 0, incremento = 0;
-	pid_t p_id;
+	 
+	int incremento = 0, status = 0;
 	int fileDescriptor, flag = 0;
 	
-	if(verificaPipe(i) > 0){
-		flag = 1;
-	}
+	pid_t p_id;
 
-	int fd_status[2];
-	if (pipe(fd_status) == -1) {
-		perror("pipe()");
-		exit(1);
-	}
+	for(int i = 0; i < maxTam; i = i + incremento){	
+		// Realiza a execucao dos comandos da lista obitida anteriormente
+		
+		flag = 0;
+		incremento = 0;
 
-	for(; i < maxTam; i = i + 2){
+		if((incremento = verificaPipe(i)) > 0){
+			flag = 1;
+		}
+		else if(verificaOp(i) == 1){
+			flag = 2;
+		}
+
+		incremento++;
+
+		int fd_status[2];
+		if (pipe(fd_status) == -1) {
+			perror("pipe()");
+			exit(1);
+		}
+		
 		p_id = fork();
 
 		if (p_id == 0) {
 			// ** Processo Filho **
 			if(flag == 1){		
-				// Realiza a execucao dos comandos da lista obitida anteriormente
-				if(vetorCMD[indiceVetor-1]->modoAbertura == 0){
-					fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
-					dup2(fileDescriptor, STDOUT_FILENO); 
-					close(fileDescriptor);
-				}
-				else if (vetorCMD[indiceVetor-1]->modoAbertura == 1){
-					fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
-					dup2(fileDescriptor, STDOUT_FILENO); 
-					close(fileDescriptor);
-				}
+				/* Cria mais um processo filho para poder executar os comandos pipe 
+				e conseguir recuperar o seu valor de retorno */		
+				pid_t p_id2;
+				p_id2 = fork();
 
-				realizaOperacaoPipe(indiceVetor-1);
+				if(p_id2 == 0){
+					if(vetorCMD[indiceVetor-1]->modoAbertura == 0){
+						fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+						dup2(fileDescriptor, STDOUT_FILENO); 
+						close(fileDescriptor);
+					}
+					else if (vetorCMD[indiceVetor-1]->modoAbertura == 1){
+						fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+						dup2(fileDescriptor, STDOUT_FILENO); 
+						close(fileDescriptor);
+					}
+
+					realizaOperacaoPipe(indiceVetor-1, incremento);
+				}
+				else{
+					int statusAux;
+					waitpid(-1, &statusAux, 0);
+					if (WIFEXITED(statusAux)) {
+						status = WEXITSTATUS(statusAux);
+					}
+				}
 			}
-			else if(1){
-				printf("Entrou no if do status! %d\n", status);
+			else if(flag == 2){
 				printf("Executando comando logico! %s %s\n", vetorCMD[i]->cmd[0], vetorCMD[i]->cmd[1]);
 				realizaComandoLogico(i, &status);
-				
-				// Envia o status para o processo pai
-				close(fd_status[0]);
-				write(fd_status[1], &status, sizeof(status));
-				close(fd_status[1]);
 			}
 			else{
-				realizaComando(i);
+				status = realizaComando(i);
 			}
-			// Verificar caso tenha && ou ||
 
-			// Caso nao tenha, executa o comando normalmente
+			// Envia o status para o processo pai
+			close(fd_status[0]);
+			write(fd_status[1], &status, sizeof(status));
+			close(fd_status[1]);
+
+			printf("Status: %d\n", status);
+			// Finaliza o processo filho para nao ficar em loop
 			return 0;
 		} 
 		else {
 			// ** Processo Pai **
 			// Aguarda a finalizacao da execucao dos comandos para poder liberar a lista ao final da execucao
-			printf("Esperando os comandos serem executados!\n");
 			waitpid(-1, NULL, 0);
-			printf("Comandos finalizados!\n");
 			
 			// Recebe o status do processo filho
 			close(fd_status[1]);
@@ -125,12 +146,11 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-
-void realizaOperacaoPipe(int i){
+void realizaOperacaoPipe(int i, int min){
 	int fileDescriptor;
 
 	// Caso base da recursao
-	if(i == -1)
+	if(i == min)
 		return;
 	
 	// Cria o Pipe que sera utilizado para a comunicacao entre os processos pai e filho
@@ -166,7 +186,7 @@ void realizaOperacaoPipe(int i){
 		else{ 
 			dup2(fd_proximo[1], STDOUT_FILENO);
 		}
-		realizaOperacaoPipe(i-1);
+		realizaOperacaoPipe(i-1, min);
 	} 
 	else {
 		// ** Processo Pai **
@@ -254,36 +274,17 @@ int realizaComando(int i){
 void realizaComandoLogico(int i, int *status){
 	
 	// Caso seja o primeiro comando a ser executado
-	if(*status == INITIAL_STATUS){
-		*status = realizaComando(i);
-		
-		if(vetorCMD[i+1]->opLogico == 0){
-			if(*status == 0){
-				realizaComando(i+1);
-			}
-		}
-		else if(vetorCMD[i+1]->opLogico == 1){
-			if(*status != 0){
-				realizaComando(i+1);
-			}
+	if(vetorCMD[i]->opLogico == 0){
+		if(*status == 0){
+			realizaComando(i);
 		}
 	}
-	else{
-		if(vetorCMD[i]->opLogico == 0){
-			if(*status == 0){
-				realizaComando(i);
-			}
-		}
-		else if(vetorCMD[i]->opLogico == 1){
-			if(*status != 0){
-				realizaComando(i);
-			}
+	else if(vetorCMD[i]->opLogico == 1){
+		if(*status != 0){
+			realizaComando(i);
 		}
 	}
-
 }
-
-
 
 
 /* Essa instrucao verifica caso exista um encadeamento de pipes,
@@ -299,6 +300,12 @@ int verificaPipe(int i){
 	return contador;
 }
 
+int verificaOp(int i){
+	if(vetorCMD[i]->opLogico != -1)
+		return 1;
+	else
+		return 0;
+}
 
 // =============================================================================
 // =============== Instrucoes para pegar e organizar os comandos ===============
