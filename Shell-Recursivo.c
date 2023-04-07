@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
 					}
 				}
 				else if(flag == 2){
-					printf("Executando comando logico! %s %s\n", vetorCMD[i]->cmd[0], vetorCMD[i]->cmd[1]);
+					//printf("Executando comando logico! %s %s\n", vetorCMD[i]->cmd[0], vetorCMD[i]->cmd[1]);
 					realizaComandoLogico(i, &status);
 				}
 				else{
