@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <strings.h>
 #include <fcntl.h>
 
 #define MAX_BUFFER 1024
@@ -67,7 +68,7 @@ void liberarLista(){
 /* Funcao MAIN para o SHELL */
 int main(int argc, char **argv) {
 	int incremento = 0, status = 0;
-	int fileDescriptor, flag = 0;
+	int fd_arquivo, flag = 0;
 	
 	pid_t p_id;
 
@@ -112,14 +113,14 @@ int main(int argc, char **argv) {
 					// Processo filho 2
 					if(p_id2 == 0){
 						if(vetorCMD[indiceVetor-1]->modoAbertura == 0){
-							fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
-							dup2(fileDescriptor, STDOUT_FILENO); 
-							close(fileDescriptor);
+							fd_arquivo = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+							dup2(fd_arquivo, STDOUT_FILENO); 
+							close(fd_arquivo);
 						}
 						else if (vetorCMD[indiceVetor-1]->modoAbertura == 1){
-							fileDescriptor = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
-							dup2(fileDescriptor, STDOUT_FILENO); 
-							close(fileDescriptor);
+							fd_arquivo = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+							dup2(fd_arquivo, STDOUT_FILENO); 
+							close(fd_arquivo);
 						}
 						
 						realizaOperacaoPipe(indiceVetor-1, incremento);
@@ -165,7 +166,7 @@ int main(int argc, char **argv) {
 }
 
 void realizaOperacaoPipe(int i, int min){
-	int fileDescriptor;
+	int fd_arquivo;
 
 	// Caso base da recursao
 	if(i == min)
@@ -190,21 +191,25 @@ void realizaOperacaoPipe(int i, int min){
 		// ** Processo Filho **
 		/* Realiza a conexao de escrita do pipe entre os processos antes 
 		de chamar a funcao novamente */
+		
+		close(fd_proximo[0]);
 
 		if(vetorCMD[i-1]->modoAbertura == 0){
-			fileDescriptor = open(vetorCMD[i-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
-			dup2(fileDescriptor, STDOUT_FILENO); 
-			close(fileDescriptor);
+			fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+			dup2(fd_arquivo, STDOUT_FILENO); 
+			close(fd_arquivo);
 		}
 		else if (vetorCMD[i-1]->modoAbertura == 1){
-			fileDescriptor = open(vetorCMD[i-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
-			dup2(fileDescriptor, STDOUT_FILENO); 
-			close(fileDescriptor);
+			fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+			dup2(fd_arquivo, STDOUT_FILENO); 
+			close(fd_arquivo);
 		}
 		else{ 
 			dup2(fd_proximo[1], STDOUT_FILENO);
 		}
 		realizaOperacaoPipe(i-1, min);
+
+		close(fd_proximo[1]);
 	} 
 	else {
 		// ** Processo Pai **
@@ -222,13 +227,16 @@ void realizaOperacaoPipe(int i, int min){
 		/* Realiza a conexao de leitura do pipe antes de realizar a execucao do comando */
 		
 		if(vetorCMD[i]->entrada != NULL){			
-			fileDescriptor = open(vetorCMD[i]->entrada, O_RDONLY, 0600);  
-			dup2(fileDescriptor, STDIN_FILENO);
-			close(fileDescriptor);
+			fd_arquivo = open(vetorCMD[i]->entrada, O_RDONLY, 0600);  
+			dup2(fd_arquivo, STDIN_FILENO);
+			close(fd_arquivo);
 		}
 		else if(i != 0){
 			dup2(fd_proximo[0], STDIN_FILENO);
 		}
+
+		close(fd_proximo[0]);
+		
 		execvp(cmd[0], cmd); // Executa o comando desejado
 	} 
 }
@@ -363,6 +371,46 @@ void retirarQuebra(char* str){
 	}
 }
 
+int temAspas(char* token){
+	int i, flag = 0;
+	for(i=0; i < strlen(token), i++){
+		if(token[i] == '\"'){
+			flag++;
+		}
+	}
+	return flag;
+}
+
+char * juntaToken(char* token){
+	int tamanho, primeiro = 1;
+	char * palavra = (char *)malloc(sizeof(char)*MAX_BUFFER);
+	bzero(palavra, MAX_BUFFER);
+
+	while(temAspas(token) == 0){
+		if(primeiro){
+			strcat(palavra, token);
+			primeiro = 0;
+			continue;
+		}
+		
+		tamanho = strlen(token);
+		token[tamanho] = ' ';
+		token[tamanho + 1] = '\0';
+
+		strcat(palavra, token);
+
+		token = strok(NULL, " \t");
+	}
+
+	
+
+	token[tamanho] = ' ';
+	token[tamanho + 1] = '\0';
+	token = strok(NULL, " \t");
+
+	return palavra;
+}
+
 void pegarCMD(){
 	COMANDO* noCMD = NULL;
 	int flag = 0;
@@ -378,33 +426,67 @@ void pegarCMD(){
 		
 
 		if(strcmp(token, "&") == 0){
+			if(noCMD == NULL){
+				printf("Erro sintatico, operacao abortada\n");
+				return;
+			}
+			
 			noCMD->background = 1;
 			flag = 0;
 		}
 		else if(strcmp(token, "&&") == 0){
+			if(noCMD == NULL){
+				printf("Erro sintatico, operacao abortada\n");
+				return;
+			}
+			
 			flag = 0;
 			op = 0;
 		}
 		else if(strcmp(token, "||") == 0){
+			if(noCMD == NULL){
+				printf("Erro sintatico, operacao abortada\n");
+				return;
+			}
+			
 			flag = 0;
 			op = 1;
 		}
 		else if(strcmp(token, "\"|\"") == 0){
+			if(noCMD == NULL){
+				printf("Erro sintatico, operacao abortada\n");
+				return;
+			}
+			
 			noCMD->pipe = 1;
 			flag = 0;
 		}
 		else if(strcmp(token, "<") == 0){
+			if(noCMD == NULL){
+				printf("Erro sintatico, operacao abortada\n");
+				return;
+			}
+			
 			token = strtok(NULL, " \t");
 			retirarQuebra(token);
 			noCMD->entrada = token;
 		}
 		else if(strcmp(token, ">") == 0){
+			if(noCMD == NULL){
+				printf("Erro sintatico, operacao abortada\n");
+				return;
+			}
+			
 			token = strtok(NULL, " \t");
 			retirarQuebra(token);
 			noCMD->saida = token;
 			noCMD->modoAbertura = 0;
 		}
 		else if(strcmp(token, ">>") == 0){
+			if(noCMD == NULL){
+				printf("Erro semantico, operacao abortada\n");
+				return;
+			}
 			token = strtok(NULL, " \t");
 			retirarQuebra(token);
 			noCMD->saida = token;
