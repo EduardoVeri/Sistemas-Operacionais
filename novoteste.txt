@@ -1,2 +1,0 @@
--rwxrwxr-x  1 eduardo eduardo 21992 abr  4 16:00 teste-Shell
--rw-------  1 eduardo eduardo     0 abr  4 16:02 teste.txt

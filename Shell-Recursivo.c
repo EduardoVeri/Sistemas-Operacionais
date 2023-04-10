@@ -45,6 +45,9 @@ COMANDO* criaNo(); // Cria um novo no para o vetor de comandos
 void retirarQuebra(char* str); // Retira uma quebra de linha caso ela tenha sido pega pelo fgets
 void pegarCMD(); // Pega os comandos fornecidos pelo usuario
 void mostrarCMD(); // Mostra os comandos pegos na tela
+int temAspas(char* token); // Verifica se a string possui aspas
+char* juntaToken(char* token); // Retira as aspas da string e junta os tokens
+void liberarLista(); // Libera a lista de comandos
 
 // Instrucoes para executar os comandos
 void realizaOperacaoPipe(int i, int min); // Realiza comandos encadeados por pipe
@@ -53,17 +56,6 @@ int verificaPipe(int i); // Realiza uma verificaçao para saber se o comando pos
 void realizaComandoLogico(int i, int *status); // Realiza um comando com operador logico && ou ||
 int verificaOp(int i); // Verifica se o comando possui operador logico && ou ||
 
-
-void liberarLista(); // Libera a lista de comandos
-
-void liberarLista(){
-	for(int i = 0; i < indiceVetor; i++){
-		free(vetorCMD[i]->cmd);
-		free(vetorCMD[i]);
-	}
-	indiceVetor = 0;
-	maxTam = 0;
-}
 
 /* Funcao MAIN para o SHELL */
 int main(int argc, char **argv) {
@@ -283,7 +275,6 @@ int realizaComando(int i){
 			waitpid(-1, &status, 0);
 			if (WIFEXITED(status)) {
 				returnStatus = WEXITSTATUS(status);
-				//printf("Processo %d finalizado com status %d\n", p_id, returnStatus);
 				return returnStatus;
 			}
 		}
@@ -373,7 +364,7 @@ void retirarQuebra(char* str){
 
 int temAspas(char* token){
 	int i, flag = 0;
-	for(i=0; i < strlen(token), i++){
+	for(i = 0; i < strlen(token); i++){
 		if(token[i] == '\"'){
 			flag++;
 		}
@@ -381,34 +372,40 @@ int temAspas(char* token){
 	return flag;
 }
 
+
 char * juntaToken(char* token){
 	int tamanho, primeiro = 1;
-	char * palavra = (char *)malloc(sizeof(char)*MAX_BUFFER);
-	bzero(palavra, MAX_BUFFER);
+	char * palavra = NULL;
+	//bzero(palavra, MAX_BUFFER);
+	int i;
+	int flag = temAspas(token);
 
-	while(temAspas(token) == 0){
-		if(primeiro){
-			strcat(palavra, token);
-			primeiro = 0;
-			continue;
-		}
-		
+	if(flag == 1){
 		tamanho = strlen(token);
 		token[tamanho] = ' ';
 		token[tamanho + 1] = '\0';
 
-		strcat(palavra, token);
-
-		token = strok(NULL, " \t");
+		palavra = strtok(NULL, "\"");
+		strcat(token, palavra);
+	}
+	else if (flag == 2){
+		for(i = 0; i < strlen(token); i++){
+			if(token[i] == '\"'){
+				int j, tam;
+				tam = strlen(token);
+				for(j = i; j < tam; j++){
+					token[j] = token[j+1];
+				}
+				flag++;
+			}
+		}
+	}
+	else{
+		printf("Erro Semantico, comando nao reconhecido\n");
+		return NULL;
 	}
 
-	
-
-	token[tamanho] = ' ';
-	token[tamanho + 1] = '\0';
-	token = strok(NULL, " \t");
-
-	return palavra;
+	return token;
 }
 
 void pegarCMD(){
@@ -424,7 +421,6 @@ void pegarCMD(){
 	while(token != NULL){
 		retirarQuebra(token); // Retira a ultima quebra de linha
 		
-
 		if(strcmp(token, "&") == 0){
 			if(noCMD == NULL){
 				printf("Erro sintatico, operacao abortada\n");
@@ -469,6 +465,11 @@ void pegarCMD(){
 			
 			token = strtok(NULL, " \t");
 			retirarQuebra(token);
+
+			if(temAspas(token) > 0){
+				token = juntaToken(token);
+			}
+
 			noCMD->entrada = token;
 		}
 		else if(strcmp(token, ">") == 0){
@@ -479,6 +480,11 @@ void pegarCMD(){
 			
 			token = strtok(NULL, " \t");
 			retirarQuebra(token);
+
+			if(temAspas(token) > 0){
+				token = juntaToken(token);
+			}
+
 			noCMD->saida = token;
 			noCMD->modoAbertura = 0;
 		}
@@ -487,12 +493,21 @@ void pegarCMD(){
 				printf("Erro semantico, operacao abortada\n");
 				return;
 			}
+
 			token = strtok(NULL, " \t");
 			retirarQuebra(token);
+
+			if(temAspas(token) > 0){
+				token = juntaToken(token);
+			}
+
 			noCMD->saida = token;
 			noCMD->modoAbertura = 1;
 		}
-		else if(token[0] == '-' || flag == 1){
+		else if((token[0] == '-' || flag == 1) && strlen(token) > 0 ){
+			if(temAspas(token) > 0){
+				token = juntaToken(token);
+			}
             noCMD->cmd[noCMD->indice++] = token;
 		}
 		else if(strlen(token) > 0){ // Evita adicionar uma instrucao so com o \n
@@ -508,6 +523,16 @@ void pegarCMD(){
 		token = strtok(NULL, " \t");
 	}
 }
+
+void liberarLista(){
+	for(int i = 0; i < indiceVetor; i++){
+		free(vetorCMD[i]->cmd);
+		free(vetorCMD[i]);
+	}
+	indiceVetor = 0;
+	maxTam = 0;
+}
+
 
 void mostrarCMD(){
 	for(int i = 0; i < maxTam; i++){
