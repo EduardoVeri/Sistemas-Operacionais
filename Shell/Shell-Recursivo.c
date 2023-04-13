@@ -271,6 +271,7 @@ int realizaComando(int i){
 		execvp(cmd[0], cmd);
 	}
 	else{
+		// Caso o comando nao seja executado em background
 		if(vetorCMD[i]->background == 0){
 			waitpid(-1, &status, 0);
 			if (WIFEXITED(status)) {
@@ -278,9 +279,15 @@ int realizaComando(int i){
 				return returnStatus;
 			}
 		}
-		else
+		else{
+			/* Caso o comando deva ser efetuado em background
+			o parametro WNOHANG faz com que o pai nao fique preso
+			esperando o filho terminar. Da mesma forma, o filho nao vira
+			zumbi, ja que a conexao entre pai e filho se mantem */
+			waitpid(-1, NULL, WNOHANG);
 			printf("Processo %d esta executando em background\n", p_id);
-	}
+		}
+	}	
 	
 	return 0;
 }
