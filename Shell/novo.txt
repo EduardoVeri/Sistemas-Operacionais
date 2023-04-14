@@ -1,17 +1,8 @@
-total 112
-drwxrwxr-x  7 eduardo eduardo  4096 abr  9 19:46 .
-drwxr-xr-x 10 eduardo eduardo  4096 abr  3 21:22 ..
--rw-rw-r--  1 eduardo eduardo    13 abr  5 15:17 arquivoEdu.txt
-drwxrwxr-x  2 eduardo eduardo  4096 abr  4 16:41 Codigos_Extras
--rwxrwxr-x  1 eduardo eduardo 22192 abr  9 19:46 exec-Shell
-drwxrwxr-x  2 eduardo eduardo  4096 abr  4 16:41 Funcionando
-drwxrwxr-x  8 eduardo eduardo  4096 abr  7 13:23 .git
--rw-rw-r--  1 eduardo eduardo    66 mar 24 16:57 .gitattributes
--rw-rw-r--  1 eduardo eduardo   430 mar 24 16:57 .gitignore
--rw-------  1 eduardo eduardo   120 abr  5 15:16 novoteste.txt
--rw-------  1 eduardo eduardo     0 abr  9 19:46 novo.txt
-drwxrwxr-x  2 eduardo eduardo  4096 abr  9 19:34 Produto_Consumidor
--rwxrwxr-x  1 eduardo eduardo 27856 abr  4 22:43 Shell-Recursivo
--rw-rw-r--  1 eduardo eduardo 10908 abr  9 19:46 Shell-Recursivo.c
--rw-rw-r--  1 eduardo eduardo   659 abr  4 16:41 teste.txt
-drwxrwxr-x  2 eduardo eduardo  4096 abr  4 16:41 .vscode
+total 76
+drwxrwxr-x 2 eduardo eduardo  4096 abr 13 17:14 .
+drwxrwxr-x 8 eduardo eduardo  4096 abr 13 13:42 ..
+-rwxrwxr-x 1 eduardo eduardo 22344 abr 13 14:05 exec-Shell
+-rw-rw-r-- 1 eduardo eduardo  1324 abr 13 17:14 falas.txt
+-rw------- 1 eduardo eduardo     0 abr 14 15:19 novo.txt
+-rwxrwxr-x 1 eduardo eduardo 22344 abr 10 12:08 Shell.exe
+-rw-rw-r-- 1 eduardo eduardo 12933 abr 14 14:43 Shell-Recursivo.c

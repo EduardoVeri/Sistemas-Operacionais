@@ -20,7 +20,6 @@
 
 #define MAX_BUFFER 1024
 #define MAX_CMD 200
-#define MSGSIZE 4096
 #define TRUE 1
 
 // Struct para rodar 
@@ -55,7 +54,6 @@ int realizaComando(int i); // Realiza um comando unitario
 int verificaPipe(int i); // Realiza uma verificaçao para saber se o comando possui pipe
 void realizaComandoLogico(int i, int *status); // Realiza um comando com operador logico && ou ||
 int verificaOp(int i); // Verifica se o comando possui operador logico && ou ||
-
 
 /* Funcao MAIN para o SHELL */
 int main(int argc, char **argv) {
@@ -103,13 +101,13 @@ int main(int argc, char **argv) {
 					p_id2 = fork();
 
 					// Processo filho 2
-					if(p_id2 == 0){
-						if(vetorCMD[indiceVetor-1]->modoAbertura == 0){
+					if(p_id2 == 0) {
+						if(vetorCMD[indiceVetor-1]->modoAbertura == 0) {
 							fd_arquivo = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
 							dup2(fd_arquivo, STDOUT_FILENO); 
 							close(fd_arquivo);
 						}
-						else if (vetorCMD[indiceVetor-1]->modoAbertura == 1){
+						else if (vetorCMD[indiceVetor-1]->modoAbertura == 1) {
 							fd_arquivo = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
 							dup2(fd_arquivo, STDOUT_FILENO); 
 							close(fd_arquivo);
@@ -241,14 +239,7 @@ int realizaComando(int i){
 	char **cmd;
 	cmd = vetorCMD[i]->cmd;
 
-	int fd[2];
-	if (pipe(fd) == -1) {
-		perror("pipe()");
-		exit(1);
-	}
-
 	pid_t p_id;
-
 	p_id = fork();
 
 	if (p_id == 0){
@@ -298,12 +289,12 @@ void realizaComandoLogico(int i, int *status){
 	// Caso seja o primeiro comando a ser executado
 	if(vetorCMD[i]->opLogico == 0){
 		if(*status == 0){
-			realizaComando(i);
+			*status = realizaComando(i);
 		}
 	}
 	else if(vetorCMD[i]->opLogico == 1){
 		if(*status != 0){
-			realizaComando(i);
+			*status = realizaComando(i);
 		}
 	}
 }

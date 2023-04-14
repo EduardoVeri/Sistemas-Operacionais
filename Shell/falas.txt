@@ -1,0 +1,19 @@
+Edu - Slides 20 ao 25 (pipe)
+
+
+Nessa apresentação, será descrito como o interpretador SHELL foi idealizado para efetuar as operações descritas na atividade.
+Primeiramente, foi preciso desenvolver a estrutura de dados que iria armazenar os comandos inseridos pelo usuário. 
+
+Como o código foi pensado em manter o processo main ativo para receber mais entradas do usuário, por meio de um while infinito, foi preciso implementar funções que obtessem a entrada do usuário via Stdin e não pelo argv.
+
+A struct a seguir ilustra as variáveis que cada comando pode possuir.
+'cmd' armazena o comando e seus argumentos. 'Background', 'pipe' são booleanos que indicam se o comando deve ser realizado em background ou ser realizado um pipe.
+
+O 'opLogico' indica se é uma função com operação lógica e qual delas. 'entrada' e 'saida' armazenam o nome dos arquivos para a leitura e escrita. 'Modo de abertura' indica qual o modo de escrita, caso tenha.
+
+Para receber e armazenar os comandos, foi criada um vetor, com cada indice sendo um comando. Cada comando é pego via função pegarCMD() que deve verificar o que cada argumento do comando significa e salvar no nó correspondente. Algumas funções adicionais foram criadas para alguns casos especiais de escrita do comando pelo usuário.
+
+Com o comando obtido
+
+
+ 
