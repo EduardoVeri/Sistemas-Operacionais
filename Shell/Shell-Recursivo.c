@@ -45,7 +45,7 @@ void retirarQuebra(char* str); // Retira uma quebra de linha caso ela tenha sido
 void pegarCMD(); // Pega os comandos fornecidos pelo usuario
 void mostrarCMD(); // Mostra os comandos pegos na tela
 int temAspas(char* token); // Verifica se a string possui aspas
-char* juntaToken(char* token); // Retira as aspas da string e junta os tokens
+char* juntaToken(char* token, char* cmd); // Retira as aspas da string e junta os tokens
 void liberarLista(); // Libera a lista de comandos
 
 // Instrucoes para executar os comandos
@@ -66,12 +66,12 @@ int main(int argc, char **argv) {
 		liberarLista();
 		printf("> ");
 		pegarCMD();
-		//mostrarCMD();
+		mostrarCMD();
 		
 		status = 0;
 		for(int i = 0; i < maxTam; i = i + incremento){	
 			// Realiza a execucao dos comandos da lista obitida anteriormente
-			
+			printf("Executando comando: %s\n", vetorCMD[i]->cmd[0]);
 			flag = 0;
 			incremento = 0;
 
@@ -114,6 +114,7 @@ int main(int argc, char **argv) {
 						}
 						
 						realizaOperacaoPipe(indiceVetor-1, incremento);
+						return 0;
 					}
 					else{
 						int statusAux;
@@ -306,10 +307,11 @@ int verificaPipe(int i){
 	int contador = 0;
 
 	while(vetorCMD[i]->pipe == 1 && i < maxTam){
+		printf("Comando: %s\n", vetorCMD[i]->cmd[0]);
 		i++;
 		contador++;
 	}
-
+	printf("Conta: %d\n", contador);
 	return contador;
 }
 
@@ -371,7 +373,7 @@ int temAspas(char* token){
 }
 
 
-char * juntaToken(char* token){
+char * juntaToken(char* token, char* cmd){
 	int tamanho, primeiro = 1;
 	char * palavra = NULL;
 	//bzero(palavra, MAX_BUFFER);
@@ -381,10 +383,8 @@ char * juntaToken(char* token){
 	if(flag == 1){
 		tamanho = strlen(token);
 		token[tamanho] = ' ';
-		token[tamanho + 1] = '\0';
-
-		palavra = strtok(NULL, "\"");
-		strcat(token, palavra);
+		int inicio = token - cmd;
+		token = strtok(&cmd[inicio+1], "\"");
 	}
 	else if (flag == 2){
 		for(i = 0; i < strlen(token); i++){
@@ -394,7 +394,6 @@ char * juntaToken(char* token){
 				for(j = i; j < tam; j++){
 					token[j] = token[j+1];
 				}
-				flag++;
 			}
 		}
 	}
@@ -465,7 +464,7 @@ void pegarCMD(){
 			retirarQuebra(token);
 
 			if(temAspas(token) > 0){
-				token = juntaToken(token);
+				token = juntaToken(token, cmd);
 			}
 
 			noCMD->entrada = token;
@@ -480,7 +479,7 @@ void pegarCMD(){
 			retirarQuebra(token);
 
 			if(temAspas(token) > 0){
-				token = juntaToken(token);
+				token = juntaToken(token, cmd);
 			}
 
 			noCMD->saida = token;
@@ -496,7 +495,7 @@ void pegarCMD(){
 			retirarQuebra(token);
 
 			if(temAspas(token) > 0){
-				token = juntaToken(token);
+				token = juntaToken(token, cmd);
 			}
 
 			noCMD->saida = token;
@@ -504,7 +503,7 @@ void pegarCMD(){
 		}
 		else if((token[0] == '-' || flag == 1) && strlen(token) > 0 ){
 			if(temAspas(token) > 0){
-				token = juntaToken(token);
+				token = juntaToken(token, cmd);
 			}
             noCMD->cmd[noCMD->indice++] = token;
 		}

@@ -1,8 +1,0 @@
-total 76
-drwxrwxr-x 2 eduardo eduardo  4096 abr 13 17:14 .
-drwxrwxr-x 8 eduardo eduardo  4096 abr 13 13:42 ..
--rwxrwxr-x 1 eduardo eduardo 22344 abr 13 14:05 exec-Shell
--rw-rw-r-- 1 eduardo eduardo  1324 abr 13 17:14 falas.txt
--rw------- 1 eduardo eduardo     0 abr 14 15:19 novo.txt
--rwxrwxr-x 1 eduardo eduardo 22344 abr 10 12:08 Shell.exe
--rw-rw-r-- 1 eduardo eduardo 12933 abr 14 14:43 Shell-Recursivo.c
