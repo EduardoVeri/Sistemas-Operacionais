@@ -66,12 +66,12 @@ int main(int argc, char **argv) {
 		liberarLista();
 		printf("> ");
 		pegarCMD();
-		mostrarCMD();
+		//mostrarCMD();
 		
 		status = 0;
 		for(int i = 0; i < maxTam; i = i + incremento){	
 			// Realiza a execucao dos comandos da lista obitida anteriormente
-			printf("Executando comando: %s\n", vetorCMD[i]->cmd[0]);
+	
 			flag = 0;
 			incremento = 0;
 
@@ -102,18 +102,18 @@ int main(int argc, char **argv) {
 
 					// Processo filho 2
 					if(p_id2 == 0) {
-						if(vetorCMD[indiceVetor-1]->modoAbertura == 0) {
-							fd_arquivo = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+						if(vetorCMD[i+incremento-1]->modoAbertura == 0) {
+							fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
 							dup2(fd_arquivo, STDOUT_FILENO); 
 							close(fd_arquivo);
 						}
-						else if (vetorCMD[indiceVetor-1]->modoAbertura == 1) {
-							fd_arquivo = open(vetorCMD[indiceVetor-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+						else if (vetorCMD[i+incremento-1]->modoAbertura == 1) {
+							fd_arquivo = open(vetorCMD[i+incremento-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
 							dup2(fd_arquivo, STDOUT_FILENO); 
 							close(fd_arquivo);
 						}
 						
-						realizaOperacaoPipe(indiceVetor-1, incremento);
+						realizaOperacaoPipe(i+incremento-1, incremento + i);
 						return 0;
 					}
 					else{
@@ -228,7 +228,8 @@ void realizaOperacaoPipe(int i, int min){
 
 		close(fd_proximo[0]);
 		
-		execvp(cmd[0], cmd); // Executa o comando desejado
+		int erro = execvp(cmd[0], cmd); // Executa o comando desejado
+		perror("execvp()");
 	} 
 }
 
@@ -307,11 +308,11 @@ int verificaPipe(int i){
 	int contador = 0;
 
 	while(vetorCMD[i]->pipe == 1 && i < maxTam){
-		printf("Comando: %s\n", vetorCMD[i]->cmd[0]);
 		i++;
 		contador++;
 	}
-	printf("Conta: %d\n", contador);
+	if(vetorCMD[i] != NULL)
+
 	return contador;
 }
 
