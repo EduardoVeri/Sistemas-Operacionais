@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
 					// Processo filho 2
 					if(p_id2 == 0) {
 						if(vetorCMD[i+incremento-1]->modoAbertura == 0) {
-							fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+							fd_arquivo = open(vetorCMD[i+incremento-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
 							dup2(fd_arquivo, STDOUT_FILENO); 
 							close(fd_arquivo);
 						}
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 							close(fd_arquivo);
 						}
 						
-						realizaOperacaoPipe(i+incremento-1, incremento + i);
+						realizaOperacaoPipe(i+incremento-1, i-1);
 						return 0;
 					}
 					else{
@@ -160,7 +160,7 @@ void realizaOperacaoPipe(int i, int min){
 	int fd_arquivo;
 
 	// Caso base da recursao
-	if(i == min)
+	if(i <= min)
 		return;
 	
 	// Cria o Pipe que sera utilizado para a comunicacao entre os processos pai e filho
@@ -184,19 +184,20 @@ void realizaOperacaoPipe(int i, int min){
 		de chamar a funcao novamente */
 		
 		close(fd_proximo[0]);
-
-		if(vetorCMD[i-1]->modoAbertura == 0){
-			fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
-			dup2(fd_arquivo, STDOUT_FILENO); 
-			close(fd_arquivo);
-		}
-		else if (vetorCMD[i-1]->modoAbertura == 1){
-			fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
-			dup2(fd_arquivo, STDOUT_FILENO); 
-			close(fd_arquivo);
-		}
-		else{ 
-			dup2(fd_proximo[1], STDOUT_FILENO);
+		if(vetorCMD[i-1] != NULL){
+			if(vetorCMD[i-1]->modoAbertura == 0){
+				fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_TRUNC | O_WRONLY, 0600); 
+				dup2(fd_arquivo, STDOUT_FILENO); 
+				close(fd_arquivo);
+			}
+			else if (vetorCMD[i-1]->modoAbertura == 1){
+				fd_arquivo = open(vetorCMD[i-1]->saida, O_CREAT | O_APPEND | O_WRONLY, 0600); 
+				dup2(fd_arquivo, STDOUT_FILENO); 
+				close(fd_arquivo);
+			}
+			else{ 
+				dup2(fd_proximo[1], STDOUT_FILENO);
+			}
 		}
 		realizaOperacaoPipe(i-1, min);
 

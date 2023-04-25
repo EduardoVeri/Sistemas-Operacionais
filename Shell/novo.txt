@@ -1,0 +1,11 @@
+total 64
+12198089 drwxrwxr-x 2 eduardo eduardo  4096 abr 16 21:30 .
+12075875 drwxrwxr-x 8 eduardo eduardo  4096 abr 15 18:04 ..
+12189788 -rwxrwxr-x 1 eduardo eduardo 22304 abr 16 21:27 exec-Shell
+12191006 -rw------- 1 eduardo eduardo     0 abr 16 21:30 novo2.txt
+12198092 -rw-rw-r-- 1 eduardo eduardo  1214 abr 15 17:33 novo_teste.txt
+12189937 -rw------- 1 eduardo eduardo     0 abr 16 21:31 novo.txt
+12191472 -rw------- 1 eduardo eduardo  2196 abr 15 20:15 ping.txt
+12198091 -rw------- 1 eduardo eduardo   121 abr 15 17:43 saida.txt
+12198090 -rw-rw-r-- 1 eduardo eduardo 13078 abr 15 18:26 Shell-Recursivo.c
+12198093 -rw-rw-r-- 1 eduardo eduardo    49 abr 15 17:33 teste.txt
