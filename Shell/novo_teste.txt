@@ -1,0 +1,15 @@
+PING www.google.com(2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004)) 56 data bytes
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=1 ttl=115 time=23.5 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=2 ttl=115 time=21.6 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=3 ttl=115 time=49.2 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=4 ttl=115 time=20.9 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=5 ttl=115 time=24.0 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=6 ttl=115 time=18.5 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=7 ttl=115 time=24.2 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=8 ttl=115 time=19.1 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=9 ttl=115 time=28.8 ms
+64 bytes from 2800:3f0:4001:825::2004 (2800:3f0:4001:825::2004): icmp_seq=10 ttl=115 time=20.5 ms
+
+--- www.google.com ping statistics ---
+10 packets transmitted, 10 received, 0% packet loss, time 9014ms
+rtt min/avg/max/mdev = 18.502/25.035/49.184/8.539 ms

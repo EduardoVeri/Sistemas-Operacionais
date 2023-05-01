@@ -1,0 +1,3 @@
+12191006 -rw------- 1 eduardo eduardo     0 abr 16 21:30 novo2.txt
+12198092 -rw-rw-r-- 1 eduardo eduardo  1214 abr 15 17:33 novo_teste.txt
+12189937 -rw------- 1 eduardo eduardo     0 abr 16 21:31 novo.txt
