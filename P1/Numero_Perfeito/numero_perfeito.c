@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <time.h>
 #include <unistd.h>
 #include <math.h>
 
-#define TRUE 1
 
 int N, NT;
 int *buffer;
