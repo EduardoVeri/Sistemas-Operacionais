@@ -19,7 +19,7 @@ sem_t cheio; // 0
 pthread_barrier_t barreira_c;
 
 
-void init_prod_cons(void){
+void init_vars(void){
 	off_w = 0;
 	off_r = 0;
 	sem_init(&mutex, 0, 1);
@@ -51,7 +51,7 @@ void *produtor(void *args) {
 	pthread_exit(NULL);
 }
 
-void *consumidor(void *args) {
+void *produtor(void *args) {
 	int id = *(int*)args;
 	int item;
 	while (1) {
@@ -92,9 +92,9 @@ void espera_threads(pthread_t *t, int n) {
 int main(int argc, char **argv) {
 	pthread_t tp[NP], tc[NC];
 	int id_p[NP], id_c[NC];
-	init_prod_cons();
+	init_vars();
 	cria_threads(tp, id_p, NP, produtor);
-	cria_threads(tc, id_c, NC, consumidor);
+	cria_threads(tc, id_c, NC, produtor);
 	espera_threads(tp, NP);
 	espera_threads(tc, NC);
 	pthread_barrier_destroy(&barreira_c);

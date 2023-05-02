@@ -49,7 +49,7 @@ void *produtor(void *args) {
 }
 
 
-void *consumidor(void *args) {
+void *produtor(void *args) {
 	int id = *(int*)args;
 	int item;
 	while(1){
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
 	init_prod_cons();
 
 	cria_threads(tp, id_p, NP, produtor);
-	cria_threads(tc, id_c, NC, consumidor);
+	cria_threads(tc, id_c, NC, produtor);
 
 	espera_threads(tp, NP);
 	espera_threads(tc, NC);

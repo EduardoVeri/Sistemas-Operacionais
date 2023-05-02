@@ -4,36 +4,44 @@
 #include <semaphore.h>
 #include <time.h>
 #include <unistd.h>
+#include <math.h>
 
 #define TRUE 1
-#define N 10
-#define NP 5
-#define NC 2
 
-int buffer[N];
+int N, NT;
+int *buffer;
 int off_w;
 
 sem_t mutex; // 1
 
-void init_prod_cons(void){
+void init_vars(void){
 	off_w = 0;
+	buffer = (int*)malloc(sizeof(int)*N);
 	sem_init(&mutex, 0, 1);
 }
 
-void *consumidor(void *args) {
+void *produtor(void *args) {
 	int id = *(int*)args;
-    int inicio = (N/NP);
-    inicio = inicio * id;
-    int fim = (N/NP);
-    fim = fim * (id+1);
+
+	int aux = floor(N/NT);
+
+    int inicio = aux*id;
+    int fim = aux;
+
+	if (id == NT-1) fim = N;
+	else fim = fim * (id+1);
+
+	int item = 0;
 
 	for(int i = inicio; i < fim; i++) {
-        if(N % i == 0){
+        if (i == 0) continue;
+		if(N % i == 0){
+			// Entra na regiao critica
             sem_wait(&mutex);
-            printf("Divisel por: %d\n", i);
-            item = buffer[off_w];
+            buffer[off_w] = i;
             off_w++;
             sem_post(&mutex);
+			// Sai da regiao critica
         }
 	}
 	pthread_exit(NULL);
@@ -55,10 +63,29 @@ void espera_threads(pthread_t *t, int n) {
 	}
 }
 int main(int argc, char **argv) {
-	pthread_t tp[NP];
-	int id_p[NP];
-	init_prod_cons();
-	cria_threads(tp, id_p, NP, produtor);
-	espera_threads(tp, NP);
+	if (argc != 3) {
+		printf("./numero_perfeito <N> <NT>\n");
+		return 1;
+	}
+	N = atoi(argv[1]);
+	NT = atoi(argv[2]);
+	
+	pthread_t tp[NT];
+	int id_p[NT];
+	init_vars();
+	cria_threads(tp, id_p, NT, produtor);
+	espera_threads(tp, NT);
+
+	int soma = 0;
+	for (int i = 0; i < off_w; i++) {
+		soma += buffer[i];
+	}
+
+	if (soma == N) {
+		printf("Numero perfeito\n");
+	} else {
+		printf("Numero nao perfeito\n");
+	}
+
 	return 0;
 }
