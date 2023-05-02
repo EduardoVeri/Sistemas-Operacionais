@@ -51,22 +51,3 @@ void man_leaves() {
     sem_post(&mutex); // Sai da região crítica
     sem_post(&men);
 }
-
-int main() {
-    sem_init(&women, 0, 1);
-    sem_init(&men, 0, 1);
-
-    // Run some example code to test the bathroom
-    for (int i = 0; i < 10; i++) {
-        pthread_t woman_thread, man_thread;
-        pthread_create(&woman_thread, NULL, (void *)woman_wants_to_enter, NULL);
-        pthread_create(&man_thread, NULL, (void *)man_wants_to_enter, NULL);
-        pthread_join(woman_thread, NULL);
-        pthread_join(man_thread, NULL);
-    }
-
-    sem_destroy(&women);
-    sem_destroy(&men);
-
-    return 0;
-}

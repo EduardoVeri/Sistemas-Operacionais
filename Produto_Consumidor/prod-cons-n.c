@@ -6,6 +6,8 @@
 #include <unistd.h>
 
 #define N 10
+#define NP 5
+#define NC 2
 
 int buffer[N];
 int off_w, off_r;
@@ -62,9 +64,6 @@ void *consumidor(void *args) {
 	}
 	pthread_exit(NULL);
 }
-
-#define NP 5
-#define NC 2
 
 void cria_threads(pthread_t *t, int *t_id, int n, void *(*func)(void*)){
 	int i;
