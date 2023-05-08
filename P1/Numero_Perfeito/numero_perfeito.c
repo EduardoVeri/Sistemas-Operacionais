@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <math.h>
 
-
 int N, NT;
 int *buffer;
 int off_w;
