@@ -11,7 +11,6 @@ inicializa_vetor.txt */
 #define RAM_SIZE 4096
 #define SWAP_SIZE 4096
 #define MAX_CONT 1000000
-#define INTERRUPCAO_CLOCK 1000 // Interrupcao de clock a cada 1000 acessos
 
 typedef unsigned long long int tempo_t; 
 
@@ -396,18 +395,17 @@ tempo_t millis(){
 
 int main(int argc, char** argv) { 
 
-    if(argc < 2 || argc > 3){
-        printf("%s <Num Alg> <Nome Arq Teste>\n", argv[0]);
+    if(argc < 2 || argc > 5){
+        printf("%s <Num Alg> <Temp Interr> <Nome Arq Teste>\n", argv[0]);
         printf("1) Nao Usada Recentemente (NUR)\n");
         printf("2) First in First out (FIFO)\n");
         printf("3) Menos Recentemente Usada (MRU)\n");
         return 0;
     }
 
-    
     int num_iteracao;
 
-    FILE* arquivo = fopen(argv[2], "r");
+    FILE* arquivo = fopen(argv[4], "r");
     if(arquivo == NULL){
         printf("Erro ao abrir o arquivo!\n");
         return 0;
@@ -416,12 +414,23 @@ int main(int argc, char** argv) {
         printf("Erro: Arquivo Vazio!\n");
         return 0;
     }
-    printf("Numero de iteracoes: %d\n", num_iteracao);
 
     // Qual algoritmo vai ser usado. 1 = NUR, 2 = FIFO, 3 = MRU
     int algoritmo = atoi(argv[1]);
     if(algoritmo > 3 || algoritmo < 1){
         printf("Numero do algoritmo fora do itervalo!\n");
+        return 0;
+    }
+
+    int selec_tempo = atoi(argv[2]);
+    if(selec_tempo < 0 || selec_tempo > 1){
+        printf("0) Tempo continuo\n1) Tempo Discreto!\n");
+        return 0;
+    }
+
+    int tempo_interrupcao = atoi(argv[3]);
+    if(tempo_interrupcao < 0){
+        printf("Tempo de interrupcao nao pode ser negativo!\n");
         return 0;
     }
     
@@ -431,6 +440,7 @@ int main(int argc, char** argv) {
 
     int page_miss_count = 0;
     int page_hit_count = 0;
+    int interrupt_count = 0;
 
     tempo_t tempo_anterior = millis();    
 	page_t* MR[RAM_SIZE];
@@ -448,29 +458,47 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-
 	for(int i=0; i<num_iteracao; i++){
         /* Criar o verificador de contador aqui */
         
-        if ((millis() - tempo_anterior) > 200){
-            // Zerar bits de referencia e os contadores
-            for(int i = 0; i < RAM_SIZE; i++){
-                MR[i]->referenciada = 0;
-                MR[i]->MRU_count = 0;
-            }
-            //printf("Interrupcao de relogio!\n");
-
-            tempo_anterior = millis();
+        switch(selec_tempo){
+            case 0:
+                if ((millis() - tempo_anterior) > tempo_interrupcao){
+                    // Zerar bits de referencia e os contadores
+                    for(int i = 0; i < RAM_SIZE; i++){
+                        MR[i]->referenciada = 0;
+                        MR[i]->MRU_count = 0;
+                    }
+                    interrupt_count++;
+                    tempo_anterior = millis();
+                }
+                break;
+            
+            case 1:
+                if(i%tempo_interrupcao == 0){
+                    // Zerar bits de referencia e os contadores
+                    for(int i = 0; i < RAM_SIZE; i++){
+                        MR[i]->referenciada = 0;
+                        MR[i]->MRU_count = 0;
+                    }
+                    interrupt_count++;
+                    
+                }
         }
+
 
         /* Fazer um laco com gerando os numeros aleatorios
         para poder realizar o acesso na memoria */
         /* Alem de gerar um numero da memoria, gerar tbm se ele
         vai modificar ou nao ele */
-        if(gerar_acesso_memoria(arquivo, &moldura, &modificado) == -1) continue; // Continua caso algum erro tenha acontecido
-        
+        if(gerar_acesso_memoria(arquivo, &moldura, &modificado) == -1){ 
+            continue; // Continua caso algum erro tenha acontecido
+        }
+
 		/* Verificar se a moldura esta na memoria real */
-        if((indice = encontrar_indice(MR, MS, moldura)) == -1) continue; // Continua caso algum erro tenha ocorrido
+        if((indice = encontrar_indice(MR, MS, moldura)) == -1){
+            continue; // Continua caso algum erro tenha ocorrido
+        } 
 
         if(indice >= RAM_SIZE){
             /* Page Miss */
@@ -532,6 +560,7 @@ int main(int argc, char** argv) {
     free(fila);
     
     printf("Page Miss: %d\n", page_miss_count);
+    printf("Interrupcoes: %d\n", interrupt_count);
 
     return 0; 
 }
