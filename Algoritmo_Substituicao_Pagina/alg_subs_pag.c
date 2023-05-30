@@ -21,29 +21,87 @@ typedef struct page_t {
     unsigned char modificada : 1; // Bit de modificacao
     unsigned char pres_aus : 1; // Bit de presenca/ausencia
     unsigned char pad : 5; // Padding
-    unsigned short moldura_pag; // Indice da moldura da pagina
+    unsigned int moldura_pag; // Indice da moldura da pagina
     unsigned char MRU_count; // Contador para o algoritmo MRU
     unsigned short WS_tempo_virtual; // Tempo virtual para o algoritmo WS
     /* Adicionar mais detalhes  */
-    
+
     struct page_t* proximo_fila; // Proxima pagina
     struct page_t* anterior_fila; // Pagina anterior
 
 } page_t;
 
-// ===== Estrutura para a Fila utilizado no algoritmo FIFO ===== //
+// ===== Estruturas para a Fila utilizado no algoritmo FIFO ===== //
 typedef struct fila{
     int tamanho;    
     page_t* inicio;
     page_t* fim;
 } fila_t;
 
-int gerar_acesso_memoria(unsigned short *moldura, short* modificado){
-    FILE* arquivo = fopen("arquivo.txt", "r");
+fila_t* inicia_fila(){
+    fila_t* fila =  (fila_t*)malloc(sizeof(fila_t));
+    fila->fim = NULL;
+    fila->inicio = NULL;
+    fila->tamanho = 0;
+
+    return fila;
+}
+
+void inserir_fila(fila_t* fila, page_t* page){
+    if(fila->tamanho == 0){
+        fila->inicio = page;
+        fila->fim = page;
+        fila->tamanho++;
+
+        page->anterior_fila = NULL;
+        page->proximo_fila = NULL;
+        
+        return;
+    }
+
+    page_t* final_fila = fila->fim;
+
+    final_fila->proximo_fila = page;
+    page->anterior_fila = final_fila;
+    page->proximo_fila = NULL;
+
+    fila->fim = page;
+    fila->tamanho++;
+
+    return;
+}
+
+page_t* remover_fila(fila_t* fila){
+    if(fila->tamanho == 0){
+        return NULL;
+    }
+
+    page_t* pagina_removida = fila->inicio;
+    fila->tamanho--;
+    
+    if(fila->tamanho == 1){
+        fila->inicio = NULL;
+        fila->fim = NULL;
+
+        return pagina_removida;
+    }
+
+    fila->inicio = pagina_removida->proximo_fila;
+    return pagina_removida;
+}
+
+// ===== Estruturas para acessos a memoria ===== //
+
+int gerar_acesso_memoria(FILE* arquivo, int *moldura, int* modificado){
 
     if (!arquivo){
         printf("Arquivo nao encontrado!\n");
-        return 1;
+        return -1;
+    }
+
+    if(fscanf(arquivo, "%d %d", modificado, moldura) == EOF){
+        printf("Fim do arquivo!\n");
+        return -1;
     }
 
     return 0;
@@ -106,15 +164,17 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
     modificar alguma coisa com base nos demais algoritmos presentes aqui. Por exemplo
     o algoritmo fifo precisa que os valores adicionados na RAM seja guardados em uma fila. */
 
-    FILE* arquivo = fopen("iniciais.txt", "r");
+    FILE* arquivo = fopen("valores_iniciais.txt", "r");
 
     if(arquivo == NULL){
         printf("Erro: Nao foi possivel abrir o arquivo de valores iniciais!\n");
         return -1;
     }
 
-    int modificado = 0;
-    int moldura = 0;
+    unsigned int modificado = 0;
+    unsigned int moldura = 0;
+
+    page_t* pagina = NULL;
 
     for(int i = 0; i < (RAM_SIZE + SWAP_SIZE); i++){
         if(!fscanf(arquivo, "%d", &moldura)){
@@ -122,7 +182,7 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
             return -1;
         }
 
-        page_t* pagina = (page_t*)malloc(sizeof(page_t));
+        pagina = (page_t*)malloc(sizeof(page_t));
         pagina->MRU_count = 0;
         pagina->WS_tempo_virtual = 0;
         pagina->modificada = 0;
@@ -130,7 +190,6 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
         pagina->pres_aus = 0;
         pagina->modificada = 0;
         pagina->moldura_pag = moldura;
-        pagina->moldura_pag = i;
         pagina->proximo_fila = NULL;
         pagina->anterior_fila = NULL;
 
@@ -142,6 +201,10 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
             MS[i - RAM_SIZE] = pagina; // Os demais serao adicionados na memoria SWAP
         }
     }
+
+    printf("Valores iniciais adicionados com sucesso!\n");
+
+    fclose(arquivo);
 
     return 0;
 }
@@ -256,7 +319,6 @@ void NUR (page_t** MR, page_t** MS, int indice) {
         MS[indice - RAM_SIZE]->referenciada = 0;
     }   
 
-    // Regina Aproves
     free(classe0);
     free(classe1);
     free(classe2);
@@ -265,58 +327,7 @@ void NUR (page_t** MR, page_t** MS, int indice) {
     return;
 }
 
-// ======= Funcoes - Algoritmo FIFO ======= // 
-fila_t* inicia_fila(){
-    fila_t* fila =  (fila_t*)malloc(sizeof(fila_t));
-    fila->fim = NULL;
-    fila->inicio = NULL;
-    fila->tamanho = 0;
-
-    return fila;
-}
-
-void inserir_fila(fila_t* fila, page_t* page){
-    if(fila->tamanho == 0){
-        fila->inicio = page;
-        fila->fim = page;
-        fila->tamanho++;
-
-        page->anterior_fila = NULL;
-        page->proximo_fila = NULL;
-        
-        return;
-    }
-
-    page_t* final_fila = fila->fim;
-
-    final_fila->proximo_fila = page;
-    page->anterior_fila = final_fila;
-    page->proximo_fila = NULL;
-
-    fila->fim = page;
-    fila->tamanho++;
-
-    return;
-}
-
-page_t* remover_fila(fila_t* fila){
-    if(fila->tamanho == 0){
-        return NULL;
-    }
-
-    page_t* pagina_removida = fila->inicio;
-    fila->tamanho--;
-    
-    if(fila->tamanho == 1){
-        fila->inicio = NULL;
-        fila->fim = NULL;
-
-        return pagina_removida;
-    }
-
-    fila->inicio = pagina_removida->proximo_fila;
-    return pagina_removida;
-}
+// ============ Algoritmo FIFO ============ //
 
 void FIFO(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificado){
     /* Esse algoritmo armazena todos os processos da RAM em uma fila. 
@@ -386,25 +397,41 @@ tempo_t millis(){
 int main(int argc, char** argv) { 
 
     if(argc < 2 || argc > 3){
-        printf("%s <Num Alg> <Total Iteracoes>\n", argv[0]);
+        printf("%s <Num Alg> <Nome Arq Teste>\n", argv[0]);
         printf("1) Nao Usada Recentemente (NUR)\n");
         printf("2) First in First out (FIFO)\n");
         printf("3) Menos Recentemente Usada (MRU)\n");
         return 0;
     }
 
-    //qual algoritmo vai ser usado.
-    int algoritmo = atoi(argv[1]);
-    int num_iteracao = atoi(argv[2]);
+    
+    int num_iteracao;
 
+    FILE* arquivo = fopen(argv[2], "r");
+    if(arquivo == NULL){
+        printf("Erro ao abrir o arquivo!\n");
+        return 0;
+    }
+    if(fscanf(arquivo, "%d", &num_iteracao) == 0){
+        printf("Erro: Arquivo Vazio!\n");
+        return 0;
+    }
+    printf("Numero de iteracoes: %d\n", num_iteracao);
+
+    // Qual algoritmo vai ser usado. 1 = NUR, 2 = FIFO, 3 = MRU
+    int algoritmo = atoi(argv[1]);
     if(algoritmo > 3 || algoritmo < 1){
         printf("Numero do algoritmo fora do itervalo!\n");
         return 0;
     }
     
-    unsigned short moldura;
-    short modificado;
+    int moldura;
+    int modificado;
 	int indice;
+
+    int page_miss_count = 0;
+    int page_hit_count = 0;
+
     tempo_t tempo_anterior = millis();    
 	page_t* MR[RAM_SIZE];
 	page_t* MS[SWAP_SIZE];
@@ -421,15 +448,17 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+
 	for(int i=0; i<num_iteracao; i++){
         /* Criar o verificador de contador aqui */
         
-        if ((millis() - tempo_anterior) > 1000){
+        if ((millis() - tempo_anterior) > 200){
             // Zerar bits de referencia e os contadores
             for(int i = 0; i < RAM_SIZE; i++){
                 MR[i]->referenciada = 0;
                 MR[i]->MRU_count = 0;
             }
+            //printf("Interrupcao de relogio!\n");
 
             tempo_anterior = millis();
         }
@@ -438,13 +467,14 @@ int main(int argc, char** argv) {
         para poder realizar o acesso na memoria */
         /* Alem de gerar um numero da memoria, gerar tbm se ele
         vai modificar ou nao ele */
-        if(gerar_acesso_memoria(&moldura, &modificado)) continue; // Continua caso algum erro tenha acontecido
+        if(gerar_acesso_memoria(arquivo, &moldura, &modificado) == -1) continue; // Continua caso algum erro tenha acontecido
         
 		/* Verificar se a moldura esta na memoria real */
         if((indice = encontrar_indice(MR, MS, moldura)) == -1) continue; // Continua caso algum erro tenha ocorrido
 
         if(indice >= RAM_SIZE){
             /* Page Miss */
+            page_miss_count++;
             /* Se a moldura estiver na memoria secundaria, entao
             deve ser movida para a memoria real */
             int indice_livre = encontrar_espaco_livre_RAM(MR);
@@ -453,6 +483,7 @@ int main(int argc, char** argv) {
                 deve ser feita a substituicao de pagina */
                 switch(algoritmo){
                     case 1:
+                        // Colocar o BIT modificado, pois faltou fazer isso
                         NUR(MR, MS, indice);    
                         break;
                     
@@ -500,5 +531,7 @@ int main(int argc, char** argv) {
     liberar_vetor(MS, SWAP_SIZE);
     free(fila);
     
+    printf("Page Miss: %d\n", page_miss_count);
+
     return 0; 
 }
