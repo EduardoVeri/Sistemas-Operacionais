@@ -13,6 +13,7 @@ inicializa_vetor.txt */
 #define MAX_CONT 4294967295
 
 unsigned long acessosRAM = 0;
+unsigned long armHD = 0;
 
 typedef unsigned long long int tempo_t; 
 
@@ -135,9 +136,12 @@ int encontrar_espaco_livre_RAM(page_t* MR[]){
 	return -1;
 }
 
-int encontrar_indice(page_t* vetorMR[], page_t* vetorMS[], int indice){
+int encontrar_indice(page_t* vetorMR[], page_t* vetorMS[], int indice, int contar_acessos){
     for(int i = 0; i < RAM_SIZE; i++){
-        acessosRAM++;
+        if(contar_acessos == 1){
+            acessosRAM++;
+        }
+
         if(vetorMR[i] == NULL){
             printf("Erro: Indice null encontrado na memoria real (%d)!\n", i);
         }
@@ -200,7 +204,6 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
         pagina->MRU_AGING_count = 0;
 
         if(i < RAM_SIZE){
-            acessosRAM++;
             MR[i] = pagina; // Os primeiros serao adicionados na memoria RAM
             inserir_fila(fila, pagina); // Adiciona todos as paginas que foram colocadas na RAM
         }
@@ -208,8 +211,6 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
             MS[i - RAM_SIZE] = pagina; // Os demais serao adicionados na memoria SWAP
         }
     }
-
-    printf("Valores iniciais adicionados com sucesso!\n");
 
     fclose(arquivo);
 
@@ -286,14 +287,12 @@ void NUR (page_t** MR, page_t** MS, int indice, int modificado) {
         
         aux = MR[classe0[i]];
         MR[classe0[i]] = MS[indice - RAM_SIZE];
-        acessosRAM++;
         MS[indice - RAM_SIZE] = aux;
 
         MR[classe0[i]]->referenciada = 1;
         if(MR[classe0[i]]->modificada != 1)
             MR[classe0[i]]->modificada = modificado;   
 
-        MS[indice - RAM_SIZE]->referenciada = 0;
         
     } else if (classe1 != NULL) {
 
@@ -302,14 +301,13 @@ void NUR (page_t** MR, page_t** MS, int indice, int modificado) {
         
         aux = MR[classe1[i]];
         MR[classe1[i]] = MS[indice - RAM_SIZE];
-        acessosRAM++;
         MS[indice - RAM_SIZE] = aux;
 
         MR[classe1[i]]->referenciada = 1;
 
         if(MR[classe1[i]]->modificada != 1)
             MR[classe1[i]]->modificada = modificado;   
-        MS[indice - RAM_SIZE]->referenciada = 0;
+
         
     } else if (classe2 != NULL) {
 
@@ -318,13 +316,13 @@ void NUR (page_t** MR, page_t** MS, int indice, int modificado) {
         
         aux = MR[classe2[i]];
         MR[classe2[i]] = MS[indice - RAM_SIZE];
-        acessosRAM++;
         MS[indice - RAM_SIZE] = aux;
 
         MR[classe2[i]]->referenciada = 1;
         if(MR[classe2[i]]->modificada != 1)
             MR[classe2[i]]->modificada = modificado;   
-        MS[indice - RAM_SIZE]->referenciada = 0;
+
+        
 
     } else {
 
@@ -333,14 +331,21 @@ void NUR (page_t** MR, page_t** MS, int indice, int modificado) {
         
         aux = MR[classe3[i]];
         MR[classe3[i]] = MS[indice - RAM_SIZE];
-        acessosRAM++;
         MS[indice - RAM_SIZE] = aux;
 
         if(MR[classe3[i]]->modificada != 1)
             MR[classe3[i]]->modificada = modificado;   
         MR[classe3[i]]->referenciada = 1;
-        MS[indice - RAM_SIZE]->referenciada = 0;
+        
     }   
+
+    MS[indice - RAM_SIZE]->referenciada = 0;
+    if(MS[indice - RAM_SIZE]->modificada == 1){
+        armHD++;
+    }
+    MS[indice - RAM_SIZE]->modificada = 0;
+
+    acessosRAM++;
 
     free(classe0);
     free(classe1);
@@ -360,7 +365,7 @@ void FIFO(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificado){
     page_t* pagina_removida = remover_fila(fila); // Remove a cabeca da fila
     page_t* pagina_escolhida = MS[indice - RAM_SIZE];
 
-    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag);
+    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 1);
     
     // Indice tem que ser na Mem RAM
     if (indice_pag_removida >= RAM_SIZE){
@@ -379,6 +384,10 @@ void FIFO(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificado){
     if(pagina_escolhida->modificada != 1)
         pagina_escolhida->modificada = modificado;
     pagina_removida->referenciada = 0;
+
+    if(pagina_removida->modificada == 1){
+        armHD++;
+    }
     pagina_removida->modificada = 0;
 }
 
@@ -402,18 +411,19 @@ void MRU(page_t* MR[], page_t* MS[], int indice, int modificado){
     page_t* aux = MR[localizacao_menor_contador];
 
     aux->MRU_count = 0;
+    if(aux->modificada == 1){
+        armHD++;
+    }
     aux->modificada = 0;
     aux->referenciada = 0;
     
     MR[localizacao_menor_contador] = MS[indice-RAM_SIZE];
-    acessosRAM++;
+
     MS[indice - RAM_SIZE] = aux;
 
     aux = MR[localizacao_menor_contador];
     aux->referenciada = 1;
-    acessosRAM++;
-    
-    acessosRAM++;
+
     if(aux->modificada != 1)
         aux->modificada = modificado;
 
@@ -425,7 +435,7 @@ void MRU(page_t* MR[], page_t* MS[], int indice, int modificado){
 //========= Funcoes e Estruturas - Algoritmo MRU-Aging =========//
 void MRU_AGING(page_t* MR[], page_t* MS[], int indice, int modificado){
     
-    unsigned long long menor_contador = MAX_CONT;
+    unsigned int menor_contador = MAX_CONT;
     int localizacao_menor_contador = -1;
     
     for(int i = 0; i < RAM_SIZE; i++){
@@ -442,32 +452,33 @@ void MRU_AGING(page_t* MR[], page_t* MS[], int indice, int modificado){
 
     acessosRAM++;
     aux->MRU_AGING_count = 0;
+
+    if(aux->modificada == 1){
+        armHD++;
+    }
+
     aux->modificada = 0;
     aux->referenciada = 0;
     
     MR[localizacao_menor_contador] = MS[indice-RAM_SIZE];
-    acessosRAM++;
     MS[indice - RAM_SIZE] = aux;
 
     aux = MR[localizacao_menor_contador];
     aux->referenciada = 1;
-    acessosRAM++;
 
-    acessosRAM++;
     if(aux->modificada != 1)
         aux->modificada = modificado;
 
-    aux->MRU_AGING_count >>= 1;
-    acessosRAM++;
+    /* aux->MRU_AGING_count >>= 1;
+    acessosRAM++; */
 
     aux->MRU_AGING_count = aux->MRU_AGING_count | 0b10000000000000000000000000000000;
-    acessosRAM++;
     
-    for (int i = 0; i < RAM_SIZE; i++) {
+/*     for (int i = 0; i < RAM_SIZE; i++) {
         acessosRAM++;
         if(localizacao_menor_contador != i)
             MR[i]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita
-    }
+    } */
 
     
 
@@ -483,7 +494,7 @@ void FIFO_SC(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificad
     page_t* pagina_removida = remover_fila(fila); // Remove a cabeca da fila
     page_t* pagina_escolhida = MS[indice - RAM_SIZE];
 
-    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag);
+    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 1);
     
     // Indice tem que ser na Mem RAM
     if (indice_pag_removida >= RAM_SIZE){
@@ -495,7 +506,7 @@ void FIFO_SC(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificad
         pagina_removida->referenciada = 0;
         inserir_fila(fila, pagina_removida); // Insere a pagina que estava no SWAP na fila
         pagina_removida = remover_fila(fila); // Remove a cabeca da fila
-        indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag);
+        indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 1);
         if (indice_pag_removida >= RAM_SIZE){
             printf("Erro: Indice incorreto no algoritmo FIFO!\n");
             return;
@@ -513,36 +524,90 @@ void FIFO_SC(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificad
     if(pagina_escolhida->modificada != 1)
         pagina_escolhida->modificada = modificado;
     pagina_removida->referenciada = 0;
+
+    if(pagina_removida->modificada == 1){
+        armHD++;
+    }
     pagina_removida->modificada = 0;
 }
 
-void WS(page_t* MR[], page_t* MS[], int indice, int modificado){
-    
-
-    return;
-}
 
 void NUR_FC(page_t* MR[], page_t* MS[], int indice, int modificado){
+    int classe0 = -1;
+    int classe1 = -1;
+    int classe2 = -1;
+    int classe3 = -1;
+    int escolhido = -1;
+
 
     for (int i = 0; i < RAM_SIZE; i++) {
-
         acessosRAM++;
+
         if ((MR[i]->modificada == 0) && (MR[i]->referenciada == 0)) { //classe 0
-        
-            page_t* aux = MR[i];
-
-            MR[i] = MS[indice - RAM_SIZE];
-            acessosRAM++;
-            MS[indice - RAM_SIZE] = aux;
-
-            MR[i]->referenciada = 1;
-            acessosRAM++;
-
-            acessosRAM++;
-            if(MR[i]->modificada != 1)
-                MR[i]->modificada = modificado;
+            classe0 = i;
+            break; // Se encontrou uma pagina na classe 0, nao precisa continuar procurando
         }
-    } 
+        else if((MR[i]->modificada == 1) && (MR[i]->referenciada == 0)){ //classe 1
+            classe1 = i;
+        }
+        else if((MR[i]->modificada == 0) && (MR[i]->referenciada == 1)){ //classe 2
+            classe2 = i;
+        }
+        else if((MR[i]->modificada == 1) && (MR[i]->referenciada == 1)){ //classe 3
+            classe3 = i;
+        }
+    }
+
+    if(classe0 != -1){
+        escolhido = classe0;   
+    }
+    else if(classe1 != -1){
+        escolhido = classe1;
+    }
+    else if(classe2 != -1){
+        escolhido = classe2;
+    }
+    else if(classe3 != -1){
+        escolhido = classe3;
+    }
+
+    page_t* aux = MR[escolhido];
+    MR[escolhido] = MS[indice - RAM_SIZE];
+    MS[indice - RAM_SIZE] = aux;
+
+    MR[escolhido]->referenciada = 1;
+
+    if(MR[escolhido]->modificada != 1)
+        MR[escolhido]->modificada = modificado;
+
+    aux->referenciada = 0; 
+    if(aux->modificada == 1){
+        armHD++;
+    }
+    aux->modificada = 0;
+
+    acessosRAM++;
+    
+}
+
+void RANDOM(page_t* MR[], page_t* MS[], int indice, int modificado){
+    int escolhido = rand() % RAM_SIZE;
+    page_t* aux = MR[escolhido];
+    MR[escolhido] = MS[indice - RAM_SIZE];
+    MS[indice - RAM_SIZE] = aux;
+
+    MR[escolhido]->referenciada = 1;
+
+    if(MR[escolhido]->modificada != 1)
+        MR[escolhido]->modificada = modificado;
+
+    aux->referenciada = 0; 
+    if(aux->modificada == 1){
+        armHD++;
+    }
+    aux->modificada = 0;
+
+    acessosRAM++;
 }
 
 /* Funcao inspirada no arduino, que pega um valor de um contador 
@@ -557,212 +622,257 @@ tempo_t millis(){
 int main(int argc, char** argv) { 
     
     if(argc < 2 || argc > 5){
-        printf("%s <Num Alg> <Sel Tempo> <Temp Interr> <Nome Arq Teste>\n", argv[0]);
-        printf("Numero do Algoritmo\n");
-        printf("1) Nao Usada Recentemente (NUR)\n");
-        printf("2) First in First out (FIFO)\n");
-        printf("3) Menos Recentemente Usada (MRU)\n");
-        printf("4) Menos Recentemente Usada com Aging\n");
+        printf("%s <Sel Tempo> <Temp Interr> <Nome Arq Teste>\n", argv[0]);
         printf("Selecao do Tempo\n");
         printf("1) Tempo Continuo\n");
         printf("2) Tempo Discreto\n");
         return 0;
     }
 
-    int num_iteracao;
+    for(int algoritmo = 1, flag = 0; algoritmo < 8 && flag != 1; algoritmo++){
 
-    FILE* arquivo = fopen(argv[4], "r");
-    if(arquivo == NULL){
-        printf("Erro ao abrir o arquivo!\n");
-        return 0;
-    }
-    if(fscanf(arquivo, "%d", &num_iteracao) == 0){
-        printf("Erro: Arquivo Vazio!\n");
-        return 0;
-    }
+        int num_iteracao;
 
-    // Qual algoritmo vai ser usado. 1 = NUR, 2 = FIFO, 3 = MRU
-    int algoritmo = atoi(argv[1]);
-    if(algoritmo > 7 || algoritmo < 1){
-        printf("Numero do algoritmo fora do intervalo!\n");
-        return 0;
-    }
+        // Abre o arquivo de teste
+        FILE* arquivo = fopen(argv[3], "r");
+        if(arquivo == NULL){
+            printf("Erro ao abrir o arquivo!\n");
+            return 0;
+        }
 
-    int selec_tempo = atoi(argv[2]);
-    if(selec_tempo < 1 || selec_tempo > 2){
-        printf("1) Tempo continuo\n2) Tempo Discreto!\n");
-        return 0;
-    }
+        // Le o primeiro valor, que sera a quantidade de linhas de teste
+        if(fscanf(arquivo, "%d", &num_iteracao) == 0){
+            printf("Erro: Arquivo Vazio!\n");
+            return 0;
+        }
 
-    int tempo_interrupcao = atoi(argv[3]);
-    if(tempo_interrupcao < 0){
-        printf("Tempo de interrupcao nao pode ser negativo!\n");
-        return 0;
-    }
+        // Obtem qual o tempo para as interrupcoes (Continuo ou Discreto)
+        int selec_tempo = atoi(argv[1]);
+        if(selec_tempo < 1 || selec_tempo > 2){
+            printf("1) Tempo continuo\n2) Tempo Discreto!\n");
+            return 0;
+        }
+
+        // Obtem o tempo para as interrupcoes (em milisegundos ou em iteracoes)
+        int tempo_interrupcao = atoi(argv[2]);
+        if(tempo_interrupcao < 0){
+            printf("Tempo de interrupcao nao pode ser negativo!\n");
+            return 0;
+        }
+
+        // Obtem o algoritmo de substituicao de paginas, caso ele tenha sido especificado
+        if(argc == 5){
+            algoritmo = atoi(argv[4]);
+            if(algoritmo < 1 || algoritmo > 7){
+                printf("Algoritmo invalido!\n");
+                return 0;
+            }
+            flag = 1; // Para sair do loop apos concluir o algoritmo selecionado
+        }
+
+        int moldura;
+        int modificado;
+        int indice;
+
+        int page_miss_count = 0;
+        int interrupt_count = 0;
+        acessosRAM = 0;
+        armHD = 0;
     
-    int moldura;
-    int modificado;
-	int indice;
+        page_t* MR[RAM_SIZE];
+        page_t* MS[SWAP_SIZE];
 
-    int page_miss_count = 0;
-    int page_hit_count = 0;
-    int interrupt_count = 0;
+        fila_t* fila = inicia_fila();
 
-    tempo_t tempo_anterior = millis();    
-	page_t* MR[RAM_SIZE];
-	page_t* MS[SWAP_SIZE];
+        inicializa_vetor(MR, RAM_SIZE);
+        inicializa_vetor(MS, SWAP_SIZE);
 
-    fila_t* fila = inicia_fila();
-
-	inicializa_vetor(MR, RAM_SIZE);
-	inicializa_vetor(MS, SWAP_SIZE);
-
-	if(incluir_paginas_iniciais(MR, MS, fila) == -1){
-        liberar_vetor(MR, RAM_SIZE);
-        liberar_vetor(MS, SWAP_SIZE);
-        free(fila);
-        return 0;
-    }
-
-	for(int i=0; i<num_iteracao; i++){
-        /* Criar o verificador de contador aqui */
+        if(incluir_paginas_iniciais(MR, MS, fila) == -1){
+            liberar_vetor(MR, RAM_SIZE);
+            liberar_vetor(MS, SWAP_SIZE);
+            free(fila);
+            fclose(arquivo);
+            return 0;
+        }
         
-        switch(selec_tempo){
-            case 1:
-                if ((millis() - tempo_anterior) > tempo_interrupcao){
-                    // Zerar bits de referencia e os contadores
-                    for(int j = 0; j < RAM_SIZE; j++){
-                        MR[i]->referenciada = 0;
-                        MR[i]->MRU_count = 0;
-                    }
-                    interrupt_count++;
-                    tempo_anterior = millis();
-                }
-                break;
+        tempo_t tempo_anterior = millis(); 
+
+        for(int i=0; i<num_iteracao; i++){
+            /* Criar o verificador de contador aqui */
             
-            case 2:
-                if(i%tempo_interrupcao == 0){
-                    // Zerar bits de referencia e os contadores
-                    for(int j = 0; j < RAM_SIZE; j++){
-                        MR[j]->referenciada = 0;
-                        MR[j]->MRU_count = 0;
+            switch(selec_tempo){
+                case 1:
+                    if ((millis() - tempo_anterior) > tempo_interrupcao){
+                        // Zerar bits de referencia e os contadores
+                        if(algoritmo != 5 && algoritmo != 7){
+                            for(int j = 0; j < RAM_SIZE; j++){
+                                MR[j]->referenciada = 0;
+                                MR[j]->MRU_count = 0;
+                                MR[j]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita
+                                
+                                acessosRAM++;
+
+                            }
+                        }
+                        interrupt_count++;
+                        tempo_anterior = millis();
                     }
-                    interrupt_count++;
-                    
+                    break;
+                
+                case 2:
+                    if(i%tempo_interrupcao == 0){
+                        // Zerar bits de referencia e os contadores
+                        if(algoritmo != 5 && algoritmo != 7){
+                            for(int j = 0; j < RAM_SIZE; j++){
+                                MR[j]->referenciada = 0;
+                                MR[j]->MRU_count = 0;
+                                MR[j]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita
+                                acessosRAM++;
+                            }
+                        }
+                        interrupt_count++;
+                        
+                    }
+                    break;
+            }
+
+
+            /* Fazer um laco com gerando os numeros aleatorios
+            para poder realizar o acesso na memoria */
+            /* Alem de gerar um numero da memoria, gerar tbm se ele
+            vai modificar ou nao ele */
+            if(gerar_acesso_memoria(arquivo, &moldura, &modificado) == -1){ 
+                continue; // Continua caso algum erro tenha acontecido
+            }
+
+            /* Verificar se a moldura esta na memoria real */
+            if((indice = encontrar_indice(MR, MS, moldura, 0)) == -1){
+                continue; // Continua caso algum erro tenha ocorrido
+            } 
+            
+            if(indice >= RAM_SIZE){
+                /* Page Miss */
+
+                page_miss_count++;
+                /* Se a moldura estiver na memoria secundaria, entao
+                deve ser movida para a memoria real */
+                int indice_livre = encontrar_espaco_livre_RAM(MR);
+                if(indice_livre == -1){
+                    /* Se nao houver espaco livre na memoria real, entao
+                    deve ser feita a substituicao de pagina */
+                    switch(algoritmo){
+                        case 1:
+                            // Colocar o BIT modificado, pois faltou fazer isso
+                            NUR(MR, MS, indice, modificado);    
+                            break;
+                        
+                        case 2:
+                            NUR_FC(MR, MS, indice, modificado);
+                            break;
+
+                        case 3:
+                            MRU(MR, MS, indice, modificado);
+                            break;
+                                        
+                        case 4:
+                            MRU_AGING(MR, MS, indice, modificado);	
+                            break;
+                        
+                        case 5:
+                            FIFO(MR, MS, fila, indice, modificado);
+                            break;
+
+                        case 6:
+                            FIFO_SC(MR, MS, fila, indice, modificado);
+                            break;
+                        
+                        case 7:
+                            RANDOM(MR, MS, indice, modificado);
+                            break;
+                    }
                 }
-                break;
-        }
-
-
-        /* Fazer um laco com gerando os numeros aleatorios
-        para poder realizar o acesso na memoria */
-        /* Alem de gerar um numero da memoria, gerar tbm se ele
-        vai modificar ou nao ele */
-        if(gerar_acesso_memoria(arquivo, &moldura, &modificado) == -1){ 
-            continue; // Continua caso algum erro tenha acontecido
-        }
-
-		/* Verificar se a moldura esta na memoria real */
-        if((indice = encontrar_indice(MR, MS, moldura)) == -1){
-            continue; // Continua caso algum erro tenha ocorrido
-        } 
-        
-        if(indice >= RAM_SIZE){
-            /* Page Miss */
-
-            page_miss_count++;
-            /* Se a moldura estiver na memoria secundaria, entao
-            deve ser movida para a memoria real */
-            int indice_livre = encontrar_espaco_livre_RAM(MR);
-            if(indice_livre == -1){
-                /* Se nao houver espaco livre na memoria real, entao
-                deve ser feita a substituicao de pagina */
-                switch(algoritmo){
-                    case 1:
-                        // Colocar o BIT modificado, pois faltou fazer isso
-                        NUR(MR, MS, indice, modificado);    
-                        break;
-                    
-                    case 2:
-                        FIFO(MR, MS, fila, indice, modificado);
-                        break;
-
-                    case 3:
-                        MRU(MR, MS, indice, modificado);
-                        break;
-									
-                    case 4:
-                        MRU_AGING(MR, MS, indice, modificado);	
-                        break;
-                    
-                    case 5:
-                        FIFO_SC(MR, MS, fila, indice, modificado);
-                        break;
-                    case 6:
-                        WS(MR, MS, indice, modificado);
-                        break;
-                    case 7:
-                        NUR_FC(MR, MS, indice, modificado);
-                        break;
+                else{
+                    /* Se houver espaco livre na memoria real, entao
+                    deve ser movida a pagina da memoria secundaria para a memoria real */
+                    MR[indice_livre] = MS[indice - RAM_SIZE];
+                    acessosRAM++;
+                    MS[indice - RAM_SIZE] = NULL;
+                    /* Teoricamente em nossos testes isso nunca vai acontecer!!! */
                 }
             }
             else{
-                /* Se houver espaco livre na memoria real, entao
-                deve ser movida a pagina da memoria secundaria para a memoria real */
-                MR[indice_livre] = MS[indice - RAM_SIZE];
+                /* Page Hit */
+                
+                switch(algoritmo){      
+                        case 3:
+                            MR[indice]->MRU_count++; // Aumenta o contador
+                            break;
+
+                        case 4:
+                            /* for (int j = 0; j < RAM_SIZE; j++) {
+                                if(j != indice){
+                                    acessosRAM++;
+                                    MR[j]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita     
+                                }
+                            } */
+                            MR[indice]->MRU_AGING_count >>= 1;
+                            MR[indice]->MRU_AGING_count = MR[indice]->MRU_AGING_count | 0b10000000000000000000000000000000;
+                            break;
+                }
                 acessosRAM++;
-                MS[indice - RAM_SIZE] = NULL;
-                /* Teoricamente em nossos testes isso nunca vai acontecer!!! */
+                /* Se a moldura estiver na memoria real, entao alterar seu bit de referencia */
+                MR[indice]->referenciada = 1;
+
+                
+                if(MR[indice]->modificada != 1)
+                    MR[indice]->modificada = modificado;
             }
         }
-        else{
-            /* Page Hit */
-            //printf("PAGE\n");
-             switch(algoritmo){      
-                    case 1:
-                        /* Pensar o que colocar aqui */
-                        break;
-                    
-                    case 2:
-                        /* Pensar o que colocar aqui */
-                        break;
 
-                    case 3:
-                        MR[indice]->MRU_count++; // Aumenta o contador
-                        acessosRAM++;
-                        break;
-
-                    case 4:
-                        for (int j = 0; j < RAM_SIZE; j++) {
-                            if(j != indice){
-                                acessosRAM++;
-                                MR[j]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita     
-                            }
-                        }
-                        MR[indice]->MRU_AGING_count >>= 1;acessosRAM++;
-                        MR[indice]->MRU_AGING_count = MR[indice]->MRU_AGING_count | 0b10000000000000000000000000000000;acessosRAM++;
-                        break;
-                  
-            }
-
-            /* Se a moldura estiver na memoria real, entao alterar seu bit de referencia */
-            MR[indice]->referenciada = 1;acessosRAM++;
-
-            acessosRAM++;
-            if(MR[indice]->modificada != 1)
-                MR[indice]->modificada = modificado;
+        // Liberar as estruturas criadas
+        liberar_vetor(MR, RAM_SIZE);
+        liberar_vetor(MS, SWAP_SIZE);
+        fclose(arquivo);
+        free(fila);
+    
+        float pct_page_miss = (float)page_miss_count/(float)num_iteracao;
+        pct_page_miss *= 100;
+        switch(algoritmo){
+            case 1:
+                printf("======= NUR ========\n");
+                break;
+            
+            case 2:
+                printf("====== NUR_FC =======\n");
+                break;
+            
+            case 3:
+                printf("======= MRU ========\n");
+                break;
+            
+            case 4:
+                printf("==== MRU_AGING =====\n");
+                break;
+            
+            case 5:
+                printf("======= FIFO =======\n");
+                break;
+            
+            case 6:
+                printf("===== FIFO_SC ======\n");
+                break;
+            
+            case 7:
+                printf("====== RANDOM ======\n");
+                break;
         }
+        printf("Page Miss: \t%.3f %%\n", pct_page_miss);
+        printf("Interrupcoes: \t%d\n", interrupt_count);
+        printf("Acessos RAM: \t%lu\n", acessosRAM);
+        printf("Armazenamento no HD: \t%lu\n", armHD);
+        printf("\n");
+
     }
-
-    // Liberar as estruturas criadas
-    liberar_vetor(MR, RAM_SIZE);
-    liberar_vetor(MS, SWAP_SIZE);
-    free(fila);
-  
-    float pct_page_miss = (float)page_miss_count/(float)num_iteracao;
-    pct_page_miss *= 100;
-    printf("Page Miss: \t%.2f %%\n", pct_page_miss);
-    printf("Interrupcoes: \t%d\n", interrupt_count);
 
     return 0; 
 }
