@@ -4,14 +4,16 @@ Esse repositório contém os códigos desenvolvidos para a disciplina de Sistema
 
 ## Conteúdo
 
-As atividades desenvolvidas incluem:
 - Projetos
     Os projetos foram desenvolvidos em C e em grupo de 4 pessoas. Os projetos são:
-    -  Projeto 1: [Interpretador de comandos SHELL]
+    - Interpretador de comandos SHELL
 
-    - Projeto 2: []
+    - Escalonador de processos para o SO-MINIX
 
-    - Projeto 3: []
+    - Ambiente de testes para Algoritmos de Substituição de Páginas
 
     - Participantes
-        - [Caio Bonani
+        - Caio Bonani Carvalho
+        - Eduardo Verissimo Faccio
+        - Marco Antonio Coral dos Santos
+        - Raphael Damasceno Rocha de Moraes
