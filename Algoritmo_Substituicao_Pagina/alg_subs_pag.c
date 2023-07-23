@@ -21,13 +21,9 @@ typedef struct page_t {
 
     unsigned char referenciada : 1; // Bit de referencia
     unsigned char modificada : 1; // Bit de modificacao
-    unsigned char pres_aus : 1; // Bit de presenca/ausencia
-    unsigned char pad : 5; // Padding
+    unsigned char pad : 6; // Padding
     unsigned int moldura_pag; // Indice da moldura da pagina
     unsigned char MRU_count; // Contador para o algoritmo MRU
-    unsigned short WS_tempo_virtual; // Tempo virtual para o algoritmo WS
-    unsigned int WS_count;
-    /* Adicionar mais detalhes  */
 
     unsigned int MRU_AGING_count;
 
@@ -193,10 +189,8 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
 
         pagina = (page_t*)malloc(sizeof(page_t));
         pagina->MRU_count = 0;
-        pagina->WS_tempo_virtual = 0;
         pagina->modificada = 0;
         pagina->referenciada = 0;
-        pagina->pres_aus = 0;
         pagina->modificada = 0;
         pagina->moldura_pag = moldura;
         pagina->proximo_fila = NULL;
@@ -365,7 +359,7 @@ void FIFO(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificado){
     page_t* pagina_removida = remover_fila(fila); // Remove a cabeca da fila
     page_t* pagina_escolhida = MS[indice - RAM_SIZE];
 
-    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 1);
+    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 0);
     
     // Indice tem que ser na Mem RAM
     if (indice_pag_removida >= RAM_SIZE){
@@ -406,8 +400,6 @@ void MRU(page_t* MR[], page_t* MS[], int indice, int modificado){
         }
     }
 
-    
-
     page_t* aux = MR[localizacao_menor_contador];
 
     aux->MRU_count = 0;
@@ -440,8 +432,6 @@ void MRU_AGING(page_t* MR[], page_t* MS[], int indice, int modificado){
     
     for(int i = 0; i < RAM_SIZE; i++){
         acessosRAM++;
-        //if(MR[i]->MRU_AGING_count != 0)
-            //printf("%lu\n", MR[i]->MRU_AGING_count);
         if(MR[i]->MRU_AGING_count < menor_contador){
             menor_contador = MR[i]->MRU_AGING_count;
             localizacao_menor_contador = i;  
@@ -469,20 +459,9 @@ void MRU_AGING(page_t* MR[], page_t* MS[], int indice, int modificado){
     if(aux->modificada != 1)
         aux->modificada = modificado;
 
-    /* aux->MRU_AGING_count >>= 1;
-    acessosRAM++; */
 
     aux->MRU_AGING_count = aux->MRU_AGING_count | 0b10000000000000000000000000000000;
     
-/*     for (int i = 0; i < RAM_SIZE; i++) {
-        acessosRAM++;
-        if(localizacao_menor_contador != i)
-            MR[i]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita
-    } */
-
-    
-
-    //aux->MRU_count = 1;
 }
 
 // ============ Funcoes e Estruturas - Algoritmo FIFO_SC ============ //
@@ -494,7 +473,7 @@ void FIFO_SC(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificad
     page_t* pagina_removida = remover_fila(fila); // Remove a cabeca da fila
     page_t* pagina_escolhida = MS[indice - RAM_SIZE];
 
-    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 1);
+    int indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 0);
     
     // Indice tem que ser na Mem RAM
     if (indice_pag_removida >= RAM_SIZE){
@@ -506,7 +485,7 @@ void FIFO_SC(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificad
         pagina_removida->referenciada = 0;
         inserir_fila(fila, pagina_removida); // Insere a pagina que estava no SWAP na fila
         pagina_removida = remover_fila(fila); // Remove a cabeca da fila
-        indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 1);
+        indice_pag_removida = encontrar_indice(MR, MS, pagina_removida->moldura_pag, 0);
         if (indice_pag_removida >= RAM_SIZE){
             printf("Erro: Indice incorreto no algoritmo FIFO!\n");
             return;
@@ -709,7 +688,6 @@ int main(int argc, char** argv) {
                                 MR[j]->referenciada = 0;
                                 MR[j]->MRU_count = 0;
                                 MR[j]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita
-                                
                                 acessosRAM++;
 
                             }
@@ -809,12 +787,6 @@ int main(int argc, char** argv) {
                             break;
 
                         case 4:
-                            /* for (int j = 0; j < RAM_SIZE; j++) {
-                                if(j != indice){
-                                    acessosRAM++;
-                                    MR[j]->MRU_AGING_count >>= 1;  // Move todos os bits para a direita     
-                                }
-                            } */
                             MR[indice]->MRU_AGING_count >>= 1;
                             MR[indice]->MRU_AGING_count = MR[indice]->MRU_AGING_count | 0b10000000000000000000000000000000;
                             break;
@@ -839,37 +811,37 @@ int main(int argc, char** argv) {
         pct_page_miss *= 100;
         switch(algoritmo){
             case 1:
-                printf("======= NUR ========\n");
+                printf("NUR ");
                 break;
             
             case 2:
-                printf("====== NUR_FC =======\n");
+                printf("NUR_FC ");
                 break;
             
             case 3:
-                printf("======= MRU ========\n");
+                printf("MRU ");
                 break;
             
             case 4:
-                printf("==== MRU_AGING =====\n");
+                printf("MRU_AGING ");
                 break;
             
             case 5:
-                printf("======= FIFO =======\n");
+                printf("FIFO ");
                 break;
             
             case 6:
-                printf("===== FIFO_SC ======\n");
+                printf("FIFO_SC ");
                 break;
             
             case 7:
-                printf("====== RANDOM ======\n");
+                printf("RANDOM ");
                 break;
         }
-        printf("Page Miss: \t%.3f %%\n", pct_page_miss);
-        printf("Interrupcoes: \t%d\n", interrupt_count);
-        printf("Acessos RAM: \t%lu\n", acessosRAM);
-        printf("Armazenamento no HD: \t%lu\n", armHD);
+        printf("\t%.3f%%\t", pct_page_miss);
+        printf("\t%d\t", interrupt_count);
+        printf("\t%lu\t", acessosRAM);
+        printf("\t%lu\t", armHD);
         printf("\n");
 
     }

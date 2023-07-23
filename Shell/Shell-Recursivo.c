@@ -447,7 +447,7 @@ void pegarCMD(){
 			flag = 0;
 			op = 1;
 		}
-		else if(strcmp(token, "\"|\"") == 0){
+		else if(strcmp(token, "|") == 0){
 			if(noCMD == NULL){
 				printf("Erro sintatico, operacao abortada\n");
 				return;
