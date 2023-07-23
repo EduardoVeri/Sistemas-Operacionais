@@ -16,7 +16,7 @@ Os projetos foram desenvolvidos em C e em grupo de 4 pessoas.
 
 - Participantes do Grupo
     - [Caio Bonani Carvalho](https://github.com/CaioBonani)
-    - [Eduardo Verissimo Faccio](https://github.com/eduardofaccio)
+    - [Eduardo Verissimo Faccio](https://github.com/EduardoVeri)
     - [Marco Antonio Coral dos Santos](https://github.com/MarcoAntonioCoraldosSantos)
     - [Raphael Damasceno Rocha de Moraes](https://github.com/mdrapha)
 
