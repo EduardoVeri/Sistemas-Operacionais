@@ -1,7 +1,15 @@
-/* Eh mais facil do que eu pensei, basta criar dois vetores, um para o swap e outro para a memoria real. Com isso, criar indices entre os valores de MS + MR. */
-
-/* Inicializar esses vetores com valores iniciais, que deve ser mantido para todos os demais testes, ate para algoritmos distintos. Esses dados de inicializacao podem ser gerados em um arquivo externo
-inicializa_vetor.txt */
+/*
+ * Trabalho realizado para a disciplina de Sistemas Operacionais
+ * Universidade Federal de São Paulo - UNIFESP
+ * Professor Doutor Bruno Kimura
+ * 
+ * Grupo:
+ * Caio Bonani Carvalho - 156.313
+ * Eduardo Verissimo Faccio - 148.859
+ * Marco Antonio Coral dos Santos - 158.467
+ * Raphael Damasceno Rocha de Moraes - 156.380
+ *
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,8 +32,7 @@ typedef struct page_t {
     unsigned char pad : 6; // Padding
     unsigned int moldura_pag; // Indice da moldura da pagina
     unsigned char MRU_count; // Contador para o algoritmo MRU
-
-    unsigned int MRU_AGING_count;
+    unsigned int MRU_AGING_count; // Contador para o algoritmo MRU aging
 
     struct page_t* proximo_fila; // Proxima pagina
     struct page_t* anterior_fila; // Pagina anterior
@@ -216,9 +223,6 @@ int incluir_paginas_iniciais(page_t* MR[], page_t* MS[], fila_t* fila){
 void NUR (page_t** MR, page_t** MS, int indice, int modificado) {
   
     int c0 = 0, c1 = 0, c2 = 0, c3 = 0;
-
-    //aq foi pra ram foi referenciada (1)
-    //aq foi pro swap bota 0 no referenciada
     
     int* classe0 = NULL;   
     int* classe1 = NULL;
@@ -510,7 +514,7 @@ void FIFO_SC(page_t* MR[], page_t* MS[], fila_t* fila, int indice, int modificad
     pagina_removida->modificada = 0;
 }
 
-
+// ============ Funcoes e Estruturas - Algoritmo NUR_FC ============ //
 void NUR_FC(page_t* MR[], page_t* MS[], int indice, int modificado){
     int classe0 = -1;
     int classe1 = -1;
@@ -569,6 +573,7 @@ void NUR_FC(page_t* MR[], page_t* MS[], int indice, int modificado){
     
 }
 
+// ============ Funcoes e Estruturas - Algoritmo RANDOM ============ //
 void RANDOM(page_t* MR[], page_t* MS[], int indice, int modificado){
     int escolhido = rand() % RAM_SIZE;
     page_t* aux = MR[escolhido];
@@ -714,11 +719,6 @@ int main(int argc, char** argv) {
                     break;
             }
 
-
-            /* Fazer um laco com gerando os numeros aleatorios
-            para poder realizar o acesso na memoria */
-            /* Alem de gerar um numero da memoria, gerar tbm se ele
-            vai modificar ou nao ele */
             if(gerar_acesso_memoria(arquivo, &moldura, &modificado) == -1){ 
                 continue; // Continua caso algum erro tenha acontecido
             }
