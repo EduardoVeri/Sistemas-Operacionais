@@ -15,10 +15,10 @@ Os projetos foram desenvolvidos em C e em grupo de 4 pessoas.
 - Ambiente de testes para Algoritmos de Substituição de Páginas
 
 - Participantes do Grupo
-    - Caio Bonani Carvalho
-    - Eduardo Verissimo Faccio
-    - Marco Antonio Coral dos Santos
-    - Raphael Damasceno Rocha de Moraes
+    - [Caio Bonani Carvalho](https://github.com/CaioBonani)
+    - [Eduardo Verissimo Faccio](https://github.com/eduardofaccio)
+    - [Marco Antonio Coral dos Santos](https://github.com/MarcoAntonioCoraldosSantos)
+    - [Raphael Damasceno Rocha de Moraes](https://github.com/mdrapha)
 
 ### Atividades em Aula
 
